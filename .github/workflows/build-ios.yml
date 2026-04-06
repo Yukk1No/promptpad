@@ -19,13 +19,28 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build unsigned .app
-        run: flutter build ios --release --no-codesign
+      - name: Build unsigned .app via xcodebuild
+        run: |
+          # Let Flutter generate the Xcode project
+          flutter build ios --release --no-codesign --config-only
+
+          cd ios
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath ../build/ios/Runner.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
 
       - name: Package as IPA
         run: |
           mkdir -p build/ios/Payload
-          cp -r build/ios/iphoneos/Runner.app build/ios/Payload/
+          cp -r build/ios/Runner.xcarchive/Products/Applications/Runner.app build/ios/Payload/
           cd build/ios && zip -r PromptPad-unsigned.ipa Payload/
 
       - name: Upload IPA
