@@ -88,7 +88,7 @@ But, in a larger sense, we can not dedicate — we can not consecrate — we can
                           horizontal: 24, vertical: 16),
                       side: BorderSide(
                           color:
-                              Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+                              Theme.of(context).colorScheme.primary.withAlpha(128)),
                     ),
                     child: const Text('Load Sample'),
                   ),
