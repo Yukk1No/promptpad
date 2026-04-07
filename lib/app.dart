@@ -17,7 +17,6 @@ class PromptPadApp extends StatelessWidget {
           secondary: Color(0xFF03DAC6),
           surface: Color(0xFF121212),
         ),
-        fontFamily: '.SF Pro Text',
       ),
       home: const HomeScreen(),
     );
