@@ -157,6 +157,13 @@ class ScriptMatcher {
       _recognizedCharCount = min(newCount, _sourceText.length);
     }
 
+    // Tail-match re-anchoring: check if the tail of spoken text
+    // matches a position ahead of the normal result, correcting drift.
+    final tailCharOffset = _tailMatch(spoken);
+    if (tailCharOffset != null && tailCharOffset > _recognizedCharCount) {
+      _recognizedCharCount = min(tailCharOffset, _sourceText.length);
+    }
+
     // Track stale state
     final madeProgress = _recognizedCharCount > prevCount;
     if (madeProgress) {
@@ -233,6 +240,69 @@ class ScriptMatcher {
     }
 
     return false;
+  }
+
+  /// Tail-match re-anchoring: match the last few spoken words against
+  /// a forward window in the script to correct accumulated drift.
+  /// Returns a char offset into _sourceText, or null if no confident match.
+  int? _tailMatch(String spoken) {
+    final spkWords = spoken
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .map((w) => w.replaceAll(RegExp(r'[^a-z0-9]'), ''))
+        .where((w) => w.isNotEmpty)
+        .toList();
+
+    if (spkWords.length < 2) return null;
+
+    // Take last 3-5 words as the tail
+    const maxTailLen = 5;
+    const minConsecutive = 2;
+    final tailLen = spkWords.length.clamp(minConsecutive, maxTailLen);
+    final tailWords = spkWords.sublist(spkWords.length - tailLen);
+
+    // Search window: [confirmedPosition, +20 words]
+    final startIdx = confirmedPosition;
+    const windowSize = 20;
+    final endIdx = min(startIdx + windowSize, _sourceWords.length);
+    if (startIdx >= endIdx) return null;
+
+    int bestMatchCount = 0;
+    int bestSourceIdx = -1;
+
+    for (var wi = startIdx; wi <= endIdx - minConsecutive; wi++) {
+      var consecutive = 0;
+      var ti = 0;
+      var si = wi;
+
+      while (ti < tailWords.length && si < endIdx) {
+        final srcWord = _sourceWords[si]
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+        if (srcWord.isEmpty) {
+          si++;
+          continue;
+        }
+
+        if (_isFuzzyMatch(srcWord, tailWords[ti])) {
+          consecutive++;
+          si++;
+          ti++;
+        } else {
+          break;
+        }
+      }
+
+      if (consecutive >= minConsecutive && consecutive > bestMatchCount) {
+        bestMatchCount = consecutive;
+        bestSourceIdx = si; // past the matched words
+      }
+    }
+
+    if (bestSourceIdx < 0) return null;
+    return _wordIndexToCharOffset(bestSourceIdx);
   }
 
   /// Update the current sentence index based on how far we've matched.

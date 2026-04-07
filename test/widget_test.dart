@@ -396,4 +396,74 @@ I will cover background and motivation.''';
       expect(script.tokens.any((t) => t.normalized == 'bold'), isTrue);
     });
   });
+
+  group('ScriptMatcher - tail-match re-anchoring', () {
+    late ScriptMatcher matcher;
+
+    setUp(() {
+      matcher = ScriptMatcher();
+    });
+
+    test('recovers from inter-session drift', () {
+      final script = Script.fromText(
+          'one two three four five six seven eight nine ten');
+      matcher.loadScript(script);
+
+      // Session 1: final only captures "one two"
+      matcher.match('one two', isFinal: true);
+
+      // Session 2: user is at "five six" — tail should catch up
+      final pos = matcher.match('five six');
+      expect(pos, greaterThanOrEqualTo(5));
+    });
+
+    test('does not jump backward', () {
+      final script = Script.fromText(
+          'the quick brown fox jumped over the lazy dog');
+      matcher.loadScript(script);
+
+      matcher.match('the quick brown fox jumped over', isFinal: true);
+      final pos1 = matcher.confirmedPosition;
+
+      // "the" appears earlier — must not go backward
+      final pos2 = matcher.match('the');
+      expect(pos2, greaterThanOrEqualTo(pos1));
+    });
+
+    test('requires at least 2 consecutive words', () {
+      final script = Script.fromText(
+          'the cat sat on the mat near the door');
+      matcher.loadScript(script);
+
+      matcher.match('the cat', isFinal: true);
+      final pos1 = matcher.confirmedPosition;
+
+      // Single "the" — tail-match won't fire (< 2 words),
+      // but normal match may advance slightly. Must not go backward.
+      final pos2 = matcher.match('the');
+      expect(pos2, greaterThanOrEqualTo(pos1));
+    });
+
+    test('works with phonetic matching', () {
+      final script = Script.fromText(
+          'we hold these truths to be self evident that all men are created equal');
+      matcher.loadScript(script);
+
+      matcher.match('we hold these truths to be', isFinal: true);
+
+      // ASR says "self evadent" — fuzzy/phonetic should match
+      final pos = matcher.match('self evadent');
+      expect(pos, greaterThanOrEqualTo(7));
+    });
+
+    test('no interference when already in sync', () {
+      final script = Script.fromText('alpha beta gamma delta epsilon');
+      matcher.loadScript(script);
+
+      matcher.match('alpha beta', isFinal: true);
+      final pos = matcher.match('gamma delta');
+      expect(pos, greaterThanOrEqualTo(3));
+      expect(pos, lessThan(5));
+    });
+  });
 }
