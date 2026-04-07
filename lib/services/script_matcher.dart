@@ -1,41 +1,37 @@
 import 'dart:math';
 import '../models/script.dart';
 
-/// Sentence-level speech matcher built on textream's dual-strategy approach.
+/// Speech matcher with tail-match re-anchoring for drift recovery.
 ///
-/// Matches spoken text against the current sentence's text.
-/// When >50% of the sentence is matched, advances to the next sentence.
-/// Also exposes word-level position for backward compatibility.
+/// Dual strategy: char-level + word-level matching from textream.
+/// Tail-match: last few spoken words searched ahead to correct drift.
+/// Stale detection + resync for catastrophic loss.
 class ScriptMatcher {
   Script? _script;
 
-  /// The collapsed source text (all words joined by single space).
   String _sourceText = '';
-
-  /// Source words split from the remaining suffix.
   List<String> _sourceWords = [];
 
-  /// Character offset where matching begins (advances on each session/resume).
+  /// Pre-normalized lowercase source words (computed once).
+  List<String> _sourceWordsNorm = [];
+
+  /// Pre-computed Double Metaphone codes for source words.
+  List<String> _sourceMetaphones = [];
+
   int _matchStartOffset = 0;
-
-  /// Total recognized characters so far (monotonically increasing).
   int _recognizedCharCount = 0;
-
-  /// Current sentence index.
   int _currentSentence = 0;
 
-  /// Pre-computed sentence boundaries as (startWordIdx, endWordIdx) pairs.
-  /// endWordIdx is exclusive — the range is [start, end).
-  List<(int, int)> _sentenceBounds = [];
-
-  /// Pre-computed character offset for the start of each sentence's first word
-  /// in _sourceText (for char-level tracking).
-  List<int> _sentenceCharOffsets = [];
-
-  /// Number of consecutive match() calls with no forward progress.
   int _staleCount = 0;
   static const int _staleThreshold = 3;
-  static const int _resyncLookahead = 5; // sentences ahead to search
+  static const int _resyncLookahead = 5;
+
+  List<(int, int)> _sentenceBounds = [];
+  List<int> _sentenceCharOffsets = [];
+
+  // Static RegExp to avoid re-creation per call
+  static final _whitespaceRe = RegExp(r'\s+');
+  static final _nonAlnumRe = RegExp(r'[^a-z0-9]');
 
   int get currentSentence => _currentSentence;
   int get totalSentences => _script?.sentences.length ?? 0;
@@ -46,56 +42,40 @@ class ScriptMatcher {
   void loadScript(Script script) {
     _script = script;
     _sourceText = script.tokens.map((t) => t.raw).join(' ');
-    _sourceWords = _sourceText.split(RegExp(r'\s+'));
+    _sourceWords = _sourceText.split(_whitespaceRe);
     _matchStartOffset = 0;
     _recognizedCharCount = 0;
     _currentSentence = 0;
     _staleCount = 0;
+
+    // Pre-compute normalized words and metaphone codes
+    _sourceWordsNorm = _sourceWords
+        .map((w) => w.toLowerCase().replaceAll(_nonAlnumRe, ''))
+        .toList();
+    _sourceMetaphones = _sourceWordsNorm.map(doubleMetaphone).toList();
+
     _computeSentenceBounds(script);
   }
 
-  /// Pre-compute sentence word ranges by walking tokens and matching
-  /// against each sentence's displayText words.
   void _computeSentenceBounds(Script script) {
     _sentenceBounds = [];
     _sentenceCharOffsets = [];
 
+    if (script.sentences.isEmpty || script.tokens.isEmpty) return;
+
     var tokenIdx = 0;
     for (final sentence in script.sentences) {
-      final sentenceWords = sentence.displayText
-          .split(RegExp(r'\s+'))
+      final sentWords = sentence.displayText
+          .split(_whitespaceRe)
           .where((w) => w.isNotEmpty)
           .toList();
-
-      if (sentenceWords.isEmpty) {
-        // Empty sentence (heading-only): mark zero-width range at current position
-        _sentenceBounds.add((tokenIdx, tokenIdx));
-        final charOff = tokenIdx < script.tokens.length
-            ? _wordIndexToCharOffset(tokenIdx)
-            : _sourceText.length;
-        _sentenceCharOffsets.add(charOff);
-        continue;
+      final startToken = tokenIdx;
+      for (final _ in sentWords) {
+        if (tokenIdx < script.tokens.length) tokenIdx++;
       }
-
-      final startWord = tokenIdx;
-      // Advance tokenIdx by the number of words in this sentence
-      tokenIdx += sentenceWords.length;
-      if (tokenIdx > script.tokens.length) {
-        tokenIdx = script.tokens.length;
-      }
-      _sentenceBounds.add((startWord, tokenIdx));
-      _sentenceCharOffsets.add(_wordIndexToCharOffset(startWord));
+      _sentenceBounds.add((startToken, tokenIdx));
+      _sentenceCharOffsets.add(_wordIndexToCharOffset(startToken));
     }
-  }
-
-  /// Convert a word index to its character offset in _sourceText.
-  int _wordIndexToCharOffset(int wordIndex) {
-    if (wordIndex <= 0) return 0;
-    var charPos = 0;
-    for (var i = 0; i < wordIndex && i < _sourceWords.length; i++) {
-      charPos += _sourceWords[i].length + 1; // +1 for space
-    }
-    return charPos;
   }
 
   void reset() {
@@ -109,7 +89,6 @@ class ScriptMatcher {
     final script = _script;
     if (script == null) return;
     final clamped = wordIndex.clamp(0, script.tokens.length - 1);
-    // Convert word index to char offset
     var charPos = 0;
     for (var i = 0; i < clamped; i++) {
       charPos += script.tokens[i].raw.length + 1;
@@ -118,14 +97,11 @@ class ScriptMatcher {
     _matchStartOffset = charPos;
   }
 
-  /// Jump to a specific sentence index.
   void jumpToSentence(int sentenceIndex) {
     final script = _script;
     if (script == null || script.sentences.isEmpty) return;
     _currentSentence = sentenceIndex.clamp(0, script.sentences.length - 1);
-
     _staleCount = 0;
-    // Use pre-computed char offset for the sentence boundary
     if (_currentSentence < _sentenceCharOffsets.length) {
       final charOff = _sentenceCharOffsets[_currentSentence];
       _recognizedCharCount = charOff;
@@ -134,22 +110,21 @@ class ScriptMatcher {
   }
 
   /// Process a spoken transcript. Returns the current word index.
-  ///
-  /// [isFinal] indicates the ASR session ended (silence detected).
-  /// Partial results re-match from the same offset (cumulative text).
-  /// Final results advance the offset for the next ASR session.
-  ///
-  /// If no progress is made for [_staleThreshold] consecutive calls,
-  /// enters resync mode: searches up to [_resyncLookahead] sentences
-  /// ahead for a better match.
   int match(String spoken, {bool isFinal = false}) {
     if (_script == null || _sourceText.isEmpty) return 0;
 
     final prevCount = _recognizedCharCount;
 
+    // Normalize spoken text once, reuse across strategies
+    final spokenLower = spoken.toLowerCase();
+    final spokenWords = spokenLower
+        .split(_whitespaceRe)
+        .where((w) => w.isNotEmpty)
+        .toList();
+
     // Normal match from current offset
-    final charResult = _charLevelMatch(spoken);
-    final wordResult = _wordLevelMatch(spoken);
+    final charResult = _charLevelMatch(spokenLower);
+    final wordResult = _wordLevelMatch(spokenWords);
     final best = max(charResult, wordResult);
     final newCount = _matchStartOffset + best;
 
@@ -157,11 +132,12 @@ class ScriptMatcher {
       _recognizedCharCount = min(newCount, _sourceText.length);
     }
 
-    // Tail-match re-anchoring: check if the tail of spoken text
-    // matches a position ahead of the normal result, correcting drift.
-    final tailCharOffset = _tailMatch(spoken);
-    if (tailCharOffset != null && tailCharOffset > _recognizedCharCount) {
-      _recognizedCharCount = min(tailCharOffset, _sourceText.length);
+    // Tail-match re-anchoring: bounded jump (max 1 sentence ahead)
+    final tailResult = _tailMatch(spokenWords);
+    if (tailResult != null && tailResult > _recognizedCharCount) {
+      // Limit jump: don't exceed next sentence boundary
+      final maxJump = _nextSentenceCharOffset();
+      _recognizedCharCount = min(tailResult, maxJump);
     }
 
     // Track stale state
@@ -174,30 +150,36 @@ class ScriptMatcher {
 
     // Resync: if stuck, search ahead in upcoming sentences
     if (_staleCount >= _staleThreshold && isFinal && spoken.trim().isNotEmpty) {
-      final resyncResult = _resyncMatch(spoken);
-      if (resyncResult) {
+      if (_resyncMatch(spokenWords)) {
         _staleCount = 0;
       }
     }
 
-    // Only advance matchStartOffset when ASR session ends (final result).
     if (isFinal) {
       _matchStartOffset = _recognizedCharCount;
     }
 
-    // Update sentence index based on match progress
     _updateSentenceFromCharCount();
-
     return confirmedPosition;
   }
 
-  /// Search ahead in the next [_resyncLookahead] sentences for the best
-  /// match against [spoken]. If found, jump to that position.
-  /// Returns true if a resync jump was made.
-  bool _resyncMatch(String spoken) {
+  /// Get the char offset of the END of the next sentence (for bounding jumps).
+  int _nextSentenceCharOffset() {
+    if (_sentenceCharOffsets.isEmpty) return _sourceText.length;
+    // Allow jumping up to 2 sentences ahead (current + 1)
+    final targetSentence = _currentSentence + 2;
+    if (targetSentence < _sentenceCharOffsets.length) {
+      return _sentenceCharOffsets[targetSentence];
+    }
+    return _sourceText.length;
+  }
+
+  /// Search ahead in the next sentences for the best match.
+  bool _resyncMatch(List<String> spokenWords) {
     final script = _script;
     if (script == null) return false;
     if (_sentenceCharOffsets.isEmpty || _sentenceBounds.isEmpty) return false;
+    if (spokenWords.isEmpty) return false;
 
     final maxSentence = min(
       _currentSentence + _resyncLookahead,
@@ -213,15 +195,14 @@ class ScriptMatcher {
       final sentCharOff = _sentenceCharOffsets[si];
       if (sentCharOff >= _sourceText.length) continue;
 
-      // Try matching spoken text against this sentence's source text
       final savedOffset = _matchStartOffset;
       _matchStartOffset = sentCharOff;
 
-      final charScore = _charLevelMatch(spoken);
-      final wordScore = _wordLevelMatch(spoken);
+      final charScore = _charLevelMatch(spokenWords.join(' '));
+      final wordScore = _wordLevelMatch(spokenWords);
       final score = max(charScore, wordScore);
 
-      _matchStartOffset = savedOffset; // restore
+      _matchStartOffset = savedOffset;
 
       if (score > bestScore) {
         bestScore = score;
@@ -230,42 +211,33 @@ class ScriptMatcher {
       }
     }
 
-    // Only resync if the lookahead match is meaningfully better than nothing
-    // Require at least 5 chars matched to avoid false positives
     if (bestSentence >= 0 && bestScore >= 5) {
       _currentSentence = bestSentence;
       _recognizedCharCount = bestCharOffset + bestScore;
       _matchStartOffset = _recognizedCharCount;
       return true;
     }
-
     return false;
   }
 
-  /// Tail-match re-anchoring: match the last few spoken words against
-  /// a forward window in the script to correct accumulated drift.
-  /// Returns a char offset into _sourceText, or null if no confident match.
-  int? _tailMatch(String spoken) {
-    final spkWords = spoken
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .map((w) => w.replaceAll(RegExp(r'[^a-z0-9]'), ''))
-        .where((w) => w.isNotEmpty)
-        .toList();
+  /// Tail-match: match last 3-5 spoken words in a forward window.
+  /// Returns char offset, or null. Bounded to prevent huge jumps.
+  int? _tailMatch(List<String> spokenWords) {
+    if (spokenWords.length < 2) return null;
 
-    if (spkWords.length < 2) return null;
-
-    // Take last 3-5 words as the tail
     const maxTailLen = 5;
     const minConsecutive = 2;
-    final tailLen = spkWords.length.clamp(minConsecutive, maxTailLen);
-    final tailWords = spkWords.sublist(spkWords.length - tailLen);
+    final tailLen = spokenWords.length.clamp(minConsecutive, maxTailLen);
+    final tailWords = spokenWords.sublist(spokenWords.length - tailLen);
+    final tailNorm = tailWords
+        .map((w) => w.replaceAll(_nonAlnumRe, ''))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (tailNorm.length < minConsecutive) return null;
 
-    // Search window: [confirmedPosition, +20 words]
     final startIdx = confirmedPosition;
-    const windowSize = 20;
-    final endIdx = min(startIdx + windowSize, _sourceWords.length);
+    const windowSize = 15; // tighter window to reduce false positives
+    final endIdx = min(startIdx + windowSize, _sourceWordsNorm.length);
     if (startIdx >= endIdx) return null;
 
     int bestMatchCount = 0;
@@ -276,17 +248,12 @@ class ScriptMatcher {
       var ti = 0;
       var si = wi;
 
-      while (ti < tailWords.length && si < endIdx) {
-        final srcWord = _sourceWords[si]
-            .toLowerCase()
-            .replaceAll(RegExp(r'[^a-z0-9]'), '');
-
-        if (srcWord.isEmpty) {
+      while (ti < tailNorm.length && si < endIdx) {
+        if (_sourceWordsNorm[si].isEmpty) {
           si++;
           continue;
         }
-
-        if (_isFuzzyMatch(srcWord, tailWords[ti])) {
+        if (_isFuzzyMatchCached(si, tailNorm[ti])) {
           consecutive++;
           si++;
           ti++;
@@ -297,7 +264,7 @@ class ScriptMatcher {
 
       if (consecutive >= minConsecutive && consecutive > bestMatchCount) {
         bestMatchCount = consecutive;
-        bestSourceIdx = si; // past the matched words
+        bestSourceIdx = si;
       }
     }
 
@@ -305,32 +272,40 @@ class ScriptMatcher {
     return _wordIndexToCharOffset(bestSourceIdx);
   }
 
-  /// Update the current sentence index based on how far we've matched.
-  /// Advances at most one sentence per call to prevent runaway skipping.
+  /// Fuzzy match using cached metaphone for source word at index.
+  bool _isFuzzyMatchCached(int sourceIdx, String spokenWord) {
+    if (sourceIdx >= _sourceWordsNorm.length) return false;
+    final srcWord = _sourceWordsNorm[sourceIdx];
+    if (srcWord.isEmpty || spokenWord.isEmpty) return false;
+    if (srcWord == spokenWord) return true;
+
+    // Cached metaphone for source, compute for spoken
+    final metaSrc = _sourceMetaphones[sourceIdx];
+    final metaSpk = doubleMetaphone(spokenWord);
+    if (metaSrc.isNotEmpty && metaSpk.isNotEmpty && metaSrc == metaSpk) {
+      return true;
+    }
+
+    return _isFuzzyMatchCore(srcWord, spokenWord);
+  }
+
   void _updateSentenceFromCharCount() {
     final script = _script;
     if (script == null || script.sentences.isEmpty) return;
     if (_sentenceBounds.isEmpty) return;
     if (_currentSentence >= script.sentences.length - 1) return;
 
-    // Use pre-computed bounds to determine sentence from char count.
     final currentWordIdx = _charCountToWordIndex(_recognizedCharCount);
-
     final (startW, endW) = _sentenceBounds[_currentSentence];
 
-    // Skip empty sentences (heading-only)
     if (startW == endW) {
       _currentSentence++;
       return;
     }
-
-    // If we're past the end of this sentence, advance
     if (currentWordIdx >= endW) {
       _currentSentence++;
       return;
     }
-
-    // Check if >50% of the sentence words have been matched
     final sentenceWordCount = endW - startW;
     final wordsMatched = (currentWordIdx - startW).clamp(0, sentenceWordCount);
     if (wordsMatched > sentenceWordCount ~/ 2) {
@@ -338,35 +313,27 @@ class ScriptMatcher {
     }
   }
 
-  /// Character-level fuzzy match on the remaining source suffix.
-  /// Returns number of characters matched from matchStartOffset.
-  ///
-  /// Uses _sourceText (not _normalizedSource) to avoid coordinate misalignment
-  /// when punctuation causes offset differences between the two strings.
-  int _charLevelMatch(String spoken) {
+  /// Character-level fuzzy match. Scan limited to avoid O(n*m) blowup.
+  int _charLevelMatch(String spokenLower) {
     if (_matchStartOffset >= _sourceText.length) return 0;
 
-    final remainingSource = _sourceText.substring(_matchStartOffset).toLowerCase();
-    final normalizedSpoken = _normalize(spoken);
-    if (normalizedSpoken.isEmpty) return 0;
+    // Limit scan: max 500 chars of remaining source to prevent slowdown
+    final remainEnd = min(_matchStartOffset + 500, _sourceText.length);
+    final remainingSource = _sourceText
+        .substring(_matchStartOffset, remainEnd)
+        .toLowerCase();
+    if (spokenLower.isEmpty) return 0;
 
-    var si = 0; // source index
-    var ri = 0; // recognition (spoken) index
+    var si = 0;
+    var ri = 0;
     var lastGoodOrigIndex = -1;
 
-    while (si < remainingSource.length && ri < normalizedSpoken.length) {
+    while (si < remainingSource.length && ri < spokenLower.length) {
       final sc = remainingSource[si];
-      final rc = normalizedSpoken[ri];
+      final rc = spokenLower[ri];
 
-      // Skip non-alnum in both
-      if (!_isAlnum(sc)) {
-        si++;
-        continue;
-      }
-      if (!_isAlnum(rc)) {
-        ri++;
-        continue;
-      }
+      if (!_isAlnum(sc)) { si++; continue; }
+      if (!_isAlnum(rc)) { ri++; continue; }
 
       if (sc == rc) {
         lastGoodOrigIndex = si;
@@ -375,13 +342,9 @@ class ScriptMatcher {
         continue;
       }
 
-      // Mismatch — try re-sync
       var synced = false;
-
-      // Skip up to 3 in spoken (ASR inserted extra)
-      for (var k = 1; k <= 3 && ri + k < normalizedSpoken.length; k++) {
-        if (_isAlnum(normalizedSpoken[ri + k]) &&
-            normalizedSpoken[ri + k] == sc) {
+      for (var k = 1; k <= 3 && ri + k < spokenLower.length; k++) {
+        if (_isAlnum(spokenLower[ri + k]) && spokenLower[ri + k] == sc) {
           ri += k;
           synced = true;
           break;
@@ -389,7 +352,6 @@ class ScriptMatcher {
       }
       if (synced) continue;
 
-      // Skip up to 3 in source (ASR missed)
       for (var k = 1; k <= 3 && si + k < remainingSource.length; k++) {
         if (_isAlnum(remainingSource[si + k]) &&
             remainingSource[si + k] == rc) {
@@ -400,7 +362,6 @@ class ScriptMatcher {
       }
       if (synced) continue;
 
-      // Neither — treat as substitution, do NOT record progress
       si++;
       ri++;
     }
@@ -408,51 +369,40 @@ class ScriptMatcher {
     return lastGoodOrigIndex + 1;
   }
 
-  /// Word-level match on the remaining source suffix.
-  /// Returns number of characters matched from matchStartOffset.
-  int _wordLevelMatch(String spoken) {
+  /// Word-level match using pre-split spoken words.
+  int _wordLevelMatch(List<String> spokenWords) {
     if (_matchStartOffset >= _sourceText.length) return 0;
+    if (spokenWords.isEmpty) return 0;
 
     final remaining = _sourceText.substring(_matchStartOffset);
-    final srcWords = remaining.split(RegExp(r'\s+'));
-    final spkWords = spoken
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .toList();
+    final srcWords = remaining.split(_whitespaceRe);
+    if (srcWords.isEmpty) return 0;
 
-    if (srcWords.isEmpty || spkWords.isEmpty) return 0;
-
-    var si = 0; // source word index
-    var ri = 0; // spoken word index
+    var si = 0;
+    var ri = 0;
     var matchedCharCount = 0;
 
-    while (si < srcWords.length && ri < spkWords.length) {
-      final srcWord =
-          srcWords[si].toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      final spkWord =
-          spkWords[ri].replaceAll(RegExp(r'[^a-z0-9]'), '');
+    while (si < srcWords.length && ri < spokenWords.length) {
+      final srcWord = srcWords[si].toLowerCase().replaceAll(_nonAlnumRe, '');
+      final spkWord = spokenWords[ri].replaceAll(_nonAlnumRe, '');
 
-      // Skip empty source words (punctuation only)
       if (srcWord.isEmpty) {
-        matchedCharCount += srcWords[si].length + 1; // +1 for space
+        matchedCharCount += srcWords[si].length + 1;
         si++;
         continue;
       }
 
-      if (_isFuzzyMatch(srcWord, spkWord)) {
+      if (_isFuzzyMatchCore(srcWord, spkWord)) {
         matchedCharCount += srcWords[si].length + 1;
         si++;
         ri++;
         continue;
       }
 
-      // Try skipping up to 3 spoken words (ASR hallucinated)
       var found = false;
-      for (var skip = 1; skip <= 3 && ri + skip < spkWords.length; skip++) {
-        final ahead =
-            spkWords[ri + skip].replaceAll(RegExp(r'[^a-z0-9]'), '');
-        if (_isFuzzyMatch(srcWord, ahead)) {
+      for (var skip = 1; skip <= 3 && ri + skip < spokenWords.length; skip++) {
+        final ahead = spokenWords[ri + skip].replaceAll(_nonAlnumRe, '');
+        if (_isFuzzyMatchCore(srcWord, ahead)) {
           ri += skip + 1;
           matchedCharCount += srcWords[si].length + 1;
           si++;
@@ -462,13 +412,10 @@ class ScriptMatcher {
       }
       if (found) continue;
 
-      // Try skipping up to 3 source words (user skipped ahead)
       for (var skip = 1; skip <= 3 && si + skip < srcWords.length; skip++) {
-        final aheadSrc = srcWords[si + skip]
-            .toLowerCase()
-            .replaceAll(RegExp(r'[^a-z0-9]'), '');
-        if (_isFuzzyMatch(aheadSrc, spkWord)) {
-          // Accumulate skipped source words
+        final aheadSrc =
+            srcWords[si + skip].toLowerCase().replaceAll(_nonAlnumRe, '');
+        if (_isFuzzyMatchCore(aheadSrc, spkWord)) {
           for (var k = 0; k <= skip; k++) {
             matchedCharCount += srcWords[si + k].length + 1;
           }
@@ -480,38 +427,31 @@ class ScriptMatcher {
       }
       if (found) continue;
 
-      // No match — advance spoken only
       ri++;
     }
 
-    // Remove trailing +1 space if we matched anything
     if (matchedCharCount > 0) matchedCharCount--;
-
     return matchedCharCount;
   }
 
-  /// Textream's isFuzzyMatch — prefix, containment, shared prefix, edit distance.
-  bool _isFuzzyMatch(String a, String b) {
+  /// Core fuzzy match without metaphone cache (for ad-hoc comparisons).
+  bool _isFuzzyMatchCore(String a, String b) {
     if (a.isEmpty || b.isEmpty) return false;
     if (a == b) return true;
 
-    // Phonetic match via Double Metaphone — handles accents/homophones
-    // "four"/"for", "right"/"rite", accented pronunciations
+    // Phonetic match
     final metaA = doubleMetaphone(a);
     final metaB = doubleMetaphone(b);
     if (metaA.isNotEmpty && metaB.isNotEmpty && metaA == metaB) return true;
 
-    // Prefix match — only if prefix covers >= 50% of the longer word
     final longer = max(a.length, b.length);
     if (a.startsWith(b) && b.length * 2 >= longer) return true;
     if (b.startsWith(a) && a.length * 2 >= longer) return true;
 
-    // Substring containment — only for words with length >= 4
     if (a.length >= 4 && b.length >= 4) {
       if (a.contains(b) || b.contains(a)) return true;
     }
 
-    // Shared prefix >= 60% of shorter word
     final shorter = min(a.length, b.length);
     if (shorter >= 2) {
       var shared = 0;
@@ -525,7 +465,6 @@ class ScriptMatcher {
       if (shared >= max(2, (shorter * 3) ~/ 5)) return true;
     }
 
-    // Edit distance tolerance (tiered by word length)
     final dist = _editDistance(a, b);
     if (shorter <= 4) return dist <= 1;
     if (shorter <= 8) return dist <= 2;
@@ -553,7 +492,6 @@ class ScriptMatcher {
     return prev[m];
   }
 
-  /// Convert character count to word index.
   int _charCountToWordIndex(int charCount) {
     final script = _script;
     if (script == null || script.tokens.isEmpty) return 0;
@@ -563,18 +501,17 @@ class ScriptMatcher {
     for (var i = 0; i < _sourceWords.length; i++) {
       offset += _sourceWords[i].length;
       if (offset >= charCount) return min(i, script.tokens.length - 1);
-      offset += 1; // space
+      offset += 1;
     }
     return script.tokens.length - 1;
   }
 
-  String _normalize(String text) {
-    // Normalize each word using the shared normalizer, preserving spaces
-    return text
-        .split(RegExp(r'\s+'))
-        .map((w) => Script.normalizeWord(w))
-        .join(' ')
-        .trim();
+  int _wordIndexToCharOffset(int wordIndex) {
+    var offset = 0;
+    for (var i = 0; i < wordIndex && i < _sourceWords.length; i++) {
+      offset += _sourceWords[i].length + 1;
+    }
+    return offset;
   }
 
   bool _isAlnum(String c) {
