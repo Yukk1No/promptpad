@@ -32,8 +32,14 @@ class ScriptMatcher {
   /// in _sourceText (for char-level tracking).
   List<int> _sentenceCharOffsets = [];
 
+  /// Number of consecutive match() calls with no forward progress.
+  int _staleCount = 0;
+  static const int _staleThreshold = 3;
+  static const int _resyncLookahead = 5; // sentences ahead to search
+
   int get currentSentence => _currentSentence;
   int get totalSentences => _script?.sentences.length ?? 0;
+  int get staleCount => _staleCount;
 
   int get confirmedPosition => _charCountToWordIndex(_recognizedCharCount);
 
@@ -44,6 +50,7 @@ class ScriptMatcher {
     _matchStartOffset = 0;
     _recognizedCharCount = 0;
     _currentSentence = 0;
+    _staleCount = 0;
     _computeSentenceBounds(script);
   }
 
@@ -95,6 +102,7 @@ class ScriptMatcher {
     _matchStartOffset = 0;
     _recognizedCharCount = 0;
     _currentSentence = 0;
+    _staleCount = 0;
   }
 
   void jumpTo(int wordIndex) {
@@ -116,6 +124,7 @@ class ScriptMatcher {
     if (script == null || script.sentences.isEmpty) return;
     _currentSentence = sentenceIndex.clamp(0, script.sentences.length - 1);
 
+    _staleCount = 0;
     // Use pre-computed char offset for the sentence boundary
     if (_currentSentence < _sentenceCharOffsets.length) {
       final charOff = _sentenceCharOffsets[_currentSentence];
@@ -129,9 +138,16 @@ class ScriptMatcher {
   /// [isFinal] indicates the ASR session ended (silence detected).
   /// Partial results re-match from the same offset (cumulative text).
   /// Final results advance the offset for the next ASR session.
+  ///
+  /// If no progress is made for [_staleThreshold] consecutive calls,
+  /// enters resync mode: searches up to [_resyncLookahead] sentences
+  /// ahead for a better match.
   int match(String spoken, {bool isFinal = false}) {
     if (_script == null || _sourceText.isEmpty) return 0;
 
+    final prevCount = _recognizedCharCount;
+
+    // Normal match from current offset
     final charResult = _charLevelMatch(spoken);
     final wordResult = _wordLevelMatch(spoken);
     final best = max(charResult, wordResult);
@@ -141,8 +157,23 @@ class ScriptMatcher {
       _recognizedCharCount = min(newCount, _sourceText.length);
     }
 
+    // Track stale state
+    final madeProgress = _recognizedCharCount > prevCount;
+    if (madeProgress) {
+      _staleCount = 0;
+    } else if (spoken.trim().isNotEmpty) {
+      _staleCount++;
+    }
+
+    // Resync: if stuck, search ahead in upcoming sentences
+    if (_staleCount >= _staleThreshold && isFinal && spoken.trim().isNotEmpty) {
+      final resyncResult = _resyncMatch(spoken);
+      if (resyncResult) {
+        _staleCount = 0;
+      }
+    }
+
     // Only advance matchStartOffset when ASR session ends (final result).
-    // Partials are cumulative — they re-match from the same start.
     if (isFinal) {
       _matchStartOffset = _recognizedCharCount;
     }
@@ -151,6 +182,57 @@ class ScriptMatcher {
     _updateSentenceFromCharCount();
 
     return confirmedPosition;
+  }
+
+  /// Search ahead in the next [_resyncLookahead] sentences for the best
+  /// match against [spoken]. If found, jump to that position.
+  /// Returns true if a resync jump was made.
+  bool _resyncMatch(String spoken) {
+    final script = _script;
+    if (script == null) return false;
+    if (_sentenceCharOffsets.isEmpty || _sentenceBounds.isEmpty) return false;
+
+    final maxSentence = min(
+      _currentSentence + _resyncLookahead,
+      script.sentences.length - 1,
+    );
+
+    int bestScore = 0;
+    int bestSentence = -1;
+    int bestCharOffset = 0;
+
+    for (var si = _currentSentence + 1; si <= maxSentence; si++) {
+      if (si >= _sentenceCharOffsets.length) break;
+      final sentCharOff = _sentenceCharOffsets[si];
+      if (sentCharOff >= _sourceText.length) continue;
+
+      // Try matching spoken text against this sentence's source text
+      final savedOffset = _matchStartOffset;
+      _matchStartOffset = sentCharOff;
+
+      final charScore = _charLevelMatch(spoken);
+      final wordScore = _wordLevelMatch(spoken);
+      final score = max(charScore, wordScore);
+
+      _matchStartOffset = savedOffset; // restore
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestSentence = si;
+        bestCharOffset = sentCharOff;
+      }
+    }
+
+    // Only resync if the lookahead match is meaningfully better than nothing
+    // Require at least 5 chars matched to avoid false positives
+    if (bestSentence >= 0 && bestScore >= 5) {
+      _currentSentence = bestSentence;
+      _recognizedCharCount = bestCharOffset + bestScore;
+      _matchStartOffset = _recognizedCharCount;
+      return true;
+    }
+
+    return false;
   }
 
   /// Update the current sentence index based on how far we've matched.

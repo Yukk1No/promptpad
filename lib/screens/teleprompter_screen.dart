@@ -24,12 +24,14 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
 
   StreamSubscription<SpeechEvent>? _sub;
   Timer? _healthTimer;
+  Timer? _staleTimer;
   double? _savedBrightness;
   bool _isRunning = false;
   bool _initialized = false;
   String _error = '';
   int _currentWord = 0;
   int _currentSentence = 0;
+  DateTime _lastProgressTime = DateTime.now();
   double _fontSize = 42;
   bool _mirrorMode = false;
   String _lastTranscript = '';
@@ -63,10 +65,11 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
 
     _sub = _speech.events.listen((event) {
       if (event.type == SpeechEventType.transcript) {
-        // Check epoch BEFORE match() to avoid mutating matcher state with stale events
         if (event.epoch != _speech.epoch) return;
+        final prevWord = _currentWord;
         final pos = _matcher.match(event.text, isFinal: event.isFinal);
-        if (event.epoch != _speech.epoch) return; // recheck after async gap
+        if (event.epoch != _speech.epoch) return;
+        if (pos != prevWord) _lastProgressTime = DateTime.now();
         setState(() {
           _currentWord = pos;
           _currentSentence = _matcher.currentSentence;
@@ -104,11 +107,36 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
       const Duration(seconds: 30),
       (_) => _speech.healthCheck(),
     );
+    // Stale check every 5s: if no progress while ASR is active, auto-advance 1 sentence
+    _lastProgressTime = DateTime.now();
+    _staleTimer?.cancel();
+    _staleTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _checkStaleAndAdvance(),
+    );
+  }
+
+  /// If no word progress for 8+ seconds while running, auto-advance 1 sentence.
+  void _checkStaleAndAdvance() {
+    if (!_isRunning || !mounted) return;
+    if (_script.sentences.isEmpty) return;
+    final elapsed = DateTime.now().difference(_lastProgressTime).inSeconds;
+    if (elapsed >= 8 && _currentSentence < _script.sentences.length - 1) {
+      _matcher.jumpToSentence(_currentSentence + 1);
+      _lastProgressTime = DateTime.now();
+      setState(() {
+        _currentSentence = _matcher.currentSentence;
+        _currentWord = _matcher.confirmedPosition;
+      });
+      if (_isRunning) _speech.restart();
+    }
   }
 
   Future<void> _stopScreenKeepAlive() async {
     _healthTimer?.cancel();
     _healthTimer = null;
+    _staleTimer?.cancel();
+    _staleTimer = null;
     WakelockPlus.disable();
     try {
       if (_savedBrightness != null) {
@@ -156,6 +184,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   void dispose() {
     _sub?.cancel();
     _healthTimer?.cancel();
+    _staleTimer?.cancel();
     _speech.dispose();
     _stopScreenKeepAlive();
     super.dispose();
