@@ -15,12 +15,8 @@ class Script {
   }
 
   factory Script.fromText(String text) {
-    // Pre-process: remove markdown heading lines so heading words
-    // do NOT become tokens. Headings only live in Sentence.heading.
-    final strippedText = text
-        .split('\n')
-        .where((line) => !RegExp(r'^\s*#{1,6}\s+').hasMatch(line))
-        .join('\n');
+    // Pre-process: strip all non-speech lines and markdown artifacts.
+    final strippedText = _stripNonSpeechLines(text);
 
     final words = strippedText.split(RegExp(r'\s+'));
     final tokens = <ScriptToken>[];
@@ -48,8 +44,42 @@ class Script {
     return Script(raw: text, tokens: tokens, sentences: sentences);
   }
 
+  /// Strip all lines that are not speech text:
+  /// - `---` horizontal rules
+  /// - `# Heading` lines (all levels)
+  /// - `**Key:** Value` metadata lines
+  /// - Empty lines
+  /// Then strip remaining inline bold/italic markers from body text.
+  static String _stripNonSpeechLines(String text) {
+    final lines = text.split('\n');
+    final kept = <String>[];
+
+    for (final line in lines) {
+      final trimmed = line.trim();
+
+      // Skip empty lines
+      if (trimmed.isEmpty) continue;
+
+      // Skip horizontal rules (--- or ___ or ***)
+      if (RegExp(r'^\s*[-_*]{3,}\s*$').hasMatch(trimmed)) continue;
+
+      // Skip markdown headings (any level)
+      if (RegExp(r'^#{1,6}\s+').hasMatch(trimmed)) continue;
+
+      // Skip metadata lines like **Title:** Audio-Based...
+      // Pattern: line starts with **SomeKey:** (bold key followed by colon)
+      if (RegExp(r'^\*\*[^*]+:\*\*').hasMatch(trimmed)) continue;
+
+      // Strip inline bold/italic markers from body text
+      kept.add(stripMarkdown(trimmed));
+    }
+
+    return kept.join(' ');
+  }
+
   /// Parse text into sentences, splitting on sentence-ending punctuation
   /// or double-newlines. Markdown headings become section annotations.
+  /// Non-speech lines (---, metadata, top-level headings) are stripped.
   static List<Sentence> _parseSentences(String text) {
     final sentences = <Sentence>[];
 
@@ -68,7 +98,16 @@ class Script {
       for (final line in lines) {
         final trimmedLine = line.trim();
 
-        // Check for markdown heading
+        // Skip empty lines
+        if (trimmedLine.isEmpty) continue;
+
+        // Skip horizontal rules
+        if (RegExp(r'^[-_*]{3,}$').hasMatch(trimmedLine)) continue;
+
+        // Skip metadata lines: **Key:** Value
+        if (RegExp(r'^\*\*[^*]+:\*\*').hasMatch(trimmedLine)) continue;
+
+        // Check for markdown heading (any level) -> annotation only
         final headingMatch = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(trimmedLine);
         if (headingMatch != null) {
           // Flush any buffered text as sentences before setting heading

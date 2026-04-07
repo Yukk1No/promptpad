@@ -28,6 +28,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   double _fontSize = 42;
   bool _mirrorMode = false;
   String _lastTranscript = '';
+  int _generation = 0; // increments on reset to ignore stale ASR events
 
   @override
   void initState() {
@@ -47,7 +48,11 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
 
     _sub = _speech.events.listen((event) {
       if (event.type == SpeechEventType.transcript) {
+        final gen = _generation;
+        // Ignore events from a stale ASR session (before reset)
+        if (gen != _generation) return;
         final pos = _matcher.match(event.text, isFinal: event.isFinal);
+        if (gen != _generation) return; // reset happened during match
         setState(() {
           _currentWord = pos;
           _currentSentence = _matcher.currentSentence;
@@ -68,13 +73,25 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     setState(() => _isRunning = !_isRunning);
   }
 
-  void _resetPosition() {
+  void _resetPosition() async {
+    _generation++; // invalidate any in-flight ASR events
+    final wasRunning = _isRunning;
+    if (wasRunning) await _speech.stop();
     _matcher.reset();
     setState(() {
       _currentWord = 0;
       _currentSentence = 0;
       _lastTranscript = '';
+      _isRunning = false;
     });
+    // Restart ASR with a fresh session if it was running
+    if (wasRunning) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (mounted) {
+        _speech.start();
+        setState(() => _isRunning = true);
+      }
+    }
   }
 
   void _skipSentence(int delta) {
@@ -117,7 +134,8 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     }
 
     return Scaffold(
-      body: Stack(
+      body: SafeArea(
+        child: Stack(
         children: [
           ScriptDisplay(
             script: _script,
@@ -162,6 +180,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
             onExit: () => Navigator.pop(context),
           ),
         ],
+      ),
       ),
     );
   }

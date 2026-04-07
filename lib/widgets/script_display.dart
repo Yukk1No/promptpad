@@ -100,6 +100,63 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
     );
   }
 
+  /// Build the list of Wrap children, inserting full-width heading widgets
+  /// as separate items so they don't break the Wrap flow of word widgets.
+  List<Widget> _buildWrapChildren(
+    BuildContext context,
+    List<ScriptToken> tokens,
+    Map<int, int> wordToSentence,
+    Map<int, int> sentenceStartWord,
+    Map<int, String> headingBefore,
+  ) {
+    final children = <Widget>[];
+    for (var i = 0; i < tokens.length; i++) {
+      final token = tokens[i];
+      final isCurrent = i == widget.currentWord;
+      final isPast = i < widget.currentWord;
+
+      final opacity = isCurrent
+          ? 1.0
+          : isPast
+              ? 0.3
+              : max(0.5, 1.0 - (i - widget.currentWord) * 0.01);
+
+      // Check if we need a heading before this word
+      final sentenceIdx = wordToSentence[i];
+      final isFirstWordOfSentence =
+          sentenceIdx != null && sentenceStartWord[sentenceIdx] == i;
+      final heading = isFirstWordOfSentence
+          ? headingBefore[sentenceIdx]
+          : null;
+
+      if (heading != null) {
+        // Insert a full-width heading widget that forces a line break
+        children.add(SizedBox(
+          width: double.infinity,
+          child: _buildHeading(heading, widget.fontSize),
+        ));
+      }
+
+      children.add(AnimatedOpacity(
+        key: _wordKeys[i],
+        opacity: opacity,
+        duration: const Duration(milliseconds: 200),
+        child: Text(
+          token.raw,
+          style: TextStyle(
+            fontSize: widget.fontSize,
+            fontWeight: isCurrent ? FontWeight.bold : FontWeight.w300,
+            color: isCurrent
+                ? Theme.of(context).colorScheme.primary
+                : Colors.white,
+            height: 1.5,
+          ),
+        ),
+      ));
+    }
+    return children;
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = widget.script.tokens;
@@ -145,57 +202,10 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
             child: Wrap(
               spacing: 8,
               runSpacing: widget.fontSize * 0.4,
-              children: List.generate(tokens.length, (i) {
-                final token = tokens[i];
-                final isCurrent = i == widget.currentWord;
-                final isPast = i < widget.currentWord;
-
-                final opacity = isCurrent
-                    ? 1.0
-                    : isPast
-                        ? 0.3
-                        : max(0.5, 1.0 - (i - widget.currentWord) * 0.01);
-
-                // Check if we need a heading before this word
-                final sentenceIdx = wordToSentence[i];
-                final isFirstWordOfSentence =
-                    sentenceIdx != null && sentenceStartWord[sentenceIdx] == i;
-                final heading = isFirstWordOfSentence
-                    ? headingBefore[sentenceIdx]
-                    : null;
-
-                final wordWidget = AnimatedOpacity(
-                  key: _wordKeys[i],
-                  opacity: opacity,
-                  duration: const Duration(milliseconds: 200),
-                  child: Text(
-                    token.raw,
-                    style: TextStyle(
-                      fontSize: widget.fontSize,
-                      fontWeight:
-                          isCurrent ? FontWeight.bold : FontWeight.w300,
-                      color: isCurrent
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.white,
-                      height: 1.5,
-                    ),
-                  ),
-                );
-
-                if (heading != null) {
-                  // Force a full-width line break before the heading
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(width: double.infinity),
-                      _buildHeading(heading, widget.fontSize),
-                      wordWidget,
-                    ],
-                  );
-                }
-
-                return wordWidget;
-              }),
+              children: _buildWrapChildren(
+                context, tokens, wordToSentence,
+                sentenceStartWord, headingBefore,
+              ),
             ),
           ),
 

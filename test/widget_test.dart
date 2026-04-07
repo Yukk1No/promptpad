@@ -74,6 +74,69 @@ void main() {
       expect(script.tokens.length, 4); // First sentence Second sentence
       expect(script.tokens[0].normalized, 'first');
     });
+
+    test('strips horizontal rules', () {
+      final script = Script.fromText(
+          'Hello world.\n\n---\n\nGoodbye world.');
+      expect(script.sentences.length, 2);
+      expect(script.sentences[0].displayText, 'Hello world.');
+      expect(script.sentences[1].displayText, 'Goodbye world.');
+      // No --- tokens
+      expect(script.tokens.every((t) => t.raw != '---'), isTrue);
+    });
+
+    test('strips metadata lines', () {
+      final script = Script.fromText(
+          '**Title:** My Talk\n**Presenter:** Alice\n\nHello everyone.');
+      expect(script.sentences.length, 1);
+      expect(script.sentences[0].displayText, 'Hello everyone.');
+      // No metadata tokens
+      expect(script.tokens.length, 2);
+      expect(script.tokens[0].normalized, 'hello');
+    });
+
+    test('strips top-level heading from tokens', () {
+      final script = Script.fromText(
+          '# My Presentation\n\n## Slide 1\nHello.');
+      // Top-level heading becomes annotation, body text is just "Hello."
+      expect(script.tokens.length, 1);
+      expect(script.tokens[0].normalized, 'hello');
+    });
+
+    test('handles full markdown presentation format', () {
+      const text = '''# Midterm Presentation Speech Script
+
+**Title:** Audio-Based COVID-19 Screening
+**Presenter:** LOU Tianyue
+**Duration:** ~15 minutes
+
+---
+
+## Slide 1 — Title (20 seconds)
+
+Good morning. My name is LOU Tianyue.
+
+---
+
+## Slide 2 — Outline (10 seconds)
+
+I will cover background and motivation.''';
+
+      final script = Script.fromText(text);
+
+      // Should have sentences only from speech text
+      expect(script.sentences.length, greaterThanOrEqualTo(2));
+
+      // First speech sentence should have Slide 1 heading
+      final s0 = script.sentences.firstWhere(
+          (s) => s.displayText.isNotEmpty);
+      expect(s0.heading, contains('Slide 1'));
+      expect(s0.displayText, 'Good morning.');
+
+      // No metadata or --- in tokens
+      expect(script.tokens.every((t) => t.raw != '---'), isTrue);
+      expect(script.tokens.every((t) => !t.raw.startsWith('**')), isTrue);
+    });
   });
 
   group('Double Metaphone', () {
@@ -239,6 +302,44 @@ void main() {
       matcher.jumpToSentence(1);
       matcher.reset();
       expect(matcher.currentSentence, 0);
+    });
+
+    test('jumpToSentence syncs word position forward', () {
+      final script = Script.fromText(
+          'First sentence here. Second sentence here. Third sentence here.');
+      matcher.loadScript(script);
+
+      matcher.jumpToSentence(2);
+      expect(matcher.currentSentence, 2);
+      // confirmedPosition should point to the start of the third sentence
+      // "First sentence here." = 3 words, "Second sentence here." = 3 words
+      // So third sentence starts at word index 6
+      expect(matcher.confirmedPosition, 6);
+    });
+
+    test('jumpToSentence syncs word position backward', () {
+      final script = Script.fromText(
+          'First sentence. Second sentence. Third sentence.');
+      matcher.loadScript(script);
+
+      matcher.jumpToSentence(2);
+      expect(matcher.currentSentence, 2);
+
+      // Now jump backward
+      matcher.jumpToSentence(0);
+      expect(matcher.currentSentence, 0);
+      expect(matcher.confirmedPosition, 0);
+    });
+
+    test('jumpToSentence works with markdown headings', () {
+      final script = Script.fromText(
+          '## Slide 1\nGood morning.\n\n## Slide 2\nI will cover this.');
+      matcher.loadScript(script);
+
+      matcher.jumpToSentence(1);
+      expect(matcher.currentSentence, 1);
+      // "Good morning." = 2 words, so second sentence starts at word 2
+      expect(matcher.confirmedPosition, 2);
     });
   });
 }

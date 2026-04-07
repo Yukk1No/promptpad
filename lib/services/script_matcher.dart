@@ -27,6 +27,14 @@ class ScriptMatcher {
   /// Current sentence index.
   int _currentSentence = 0;
 
+  /// Pre-computed sentence boundaries as (startWordIdx, endWordIdx) pairs.
+  /// endWordIdx is exclusive — the range is [start, end).
+  List<(int, int)> _sentenceBounds = [];
+
+  /// Pre-computed character offset for the start of each sentence's first word
+  /// in _sourceText (for char-level tracking).
+  List<int> _sentenceCharOffsets = [];
+
   int get currentSentence => _currentSentence;
   int get totalSentences => _script?.sentences.length ?? 0;
 
@@ -40,6 +48,51 @@ class ScriptMatcher {
     _matchStartOffset = 0;
     _recognizedCharCount = 0;
     _currentSentence = 0;
+    _computeSentenceBounds(script);
+  }
+
+  /// Pre-compute sentence word ranges by walking tokens and matching
+  /// against each sentence's displayText words.
+  void _computeSentenceBounds(Script script) {
+    _sentenceBounds = [];
+    _sentenceCharOffsets = [];
+
+    var tokenIdx = 0;
+    for (final sentence in script.sentences) {
+      final sentenceWords = sentence.displayText
+          .split(RegExp(r'\s+'))
+          .where((w) => w.isNotEmpty)
+          .toList();
+
+      if (sentenceWords.isEmpty) {
+        // Empty sentence (heading-only): mark zero-width range at current position
+        _sentenceBounds.add((tokenIdx, tokenIdx));
+        final charOff = tokenIdx < script.tokens.length
+            ? _wordIndexToCharOffset(tokenIdx)
+            : _sourceText.length;
+        _sentenceCharOffsets.add(charOff);
+        continue;
+      }
+
+      final startWord = tokenIdx;
+      // Advance tokenIdx by the number of words in this sentence
+      tokenIdx += sentenceWords.length;
+      if (tokenIdx > script.tokens.length) {
+        tokenIdx = script.tokens.length;
+      }
+      _sentenceBounds.add((startWord, tokenIdx));
+      _sentenceCharOffsets.add(_wordIndexToCharOffset(startWord));
+    }
+  }
+
+  /// Convert a word index to its character offset in _sourceText.
+  int _wordIndexToCharOffset(int wordIndex) {
+    if (wordIndex <= 0) return 0;
+    var charPos = 0;
+    for (var i = 0; i < wordIndex && i < _sourceWords.length; i++) {
+      charPos += _sourceWords[i].length + 1; // +1 for space
+    }
+    return charPos;
   }
 
   void reset() {
@@ -67,28 +120,11 @@ class ScriptMatcher {
     if (script == null || script.sentences.isEmpty) return;
     _currentSentence = sentenceIndex.clamp(0, script.sentences.length - 1);
 
-    // Also update char-level tracking to match the sentence boundary
-    final sentence = script.sentences[_currentSentence];
-    // Find the char offset of this sentence's first word in the source text
-    final sentenceNormalized = _normalize(sentence.rawText);
-    if (sentenceNormalized.isNotEmpty) {
-      // Search for the sentence start in the normalized source
-      // We find the Nth occurrence by tracking sentences before this one
-      var searchFrom = 0;
-      for (var i = 0; i < _currentSentence; i++) {
-        final prevNorm = _normalize(script.sentences[i].rawText);
-        if (prevNorm.isNotEmpty) {
-          final idx = _normalizedSource.indexOf(prevNorm, searchFrom);
-          if (idx >= 0) {
-            searchFrom = idx + prevNorm.length;
-          }
-        }
-      }
-      final idx = _normalizedSource.indexOf(sentenceNormalized, searchFrom);
-      if (idx >= 0) {
-        _recognizedCharCount = idx;
-        _matchStartOffset = idx;
-      }
+    // Use pre-computed char offset for the sentence boundary
+    if (_currentSentence < _sentenceCharOffsets.length) {
+      final charOff = _sentenceCharOffsets[_currentSentence];
+      _recognizedCharCount = charOff;
+      _matchStartOffset = charOff;
     }
   }
 
@@ -125,61 +161,34 @@ class ScriptMatcher {
   void _updateSentenceFromCharCount() {
     final script = _script;
     if (script == null || script.sentences.isEmpty) return;
+    if (_sentenceBounds.isEmpty) return;
 
-    // Use a while loop to advance through multiple sentences if needed
+    // Use pre-computed bounds to determine sentence from char count.
+    final currentWordIdx = _charCountToWordIndex(_recognizedCharCount);
+
     while (_currentSentence < script.sentences.length - 1) {
-      final currentSentenceObj = script.sentences[_currentSentence];
-      final sentenceText = currentSentenceObj.rawText;
-      if (sentenceText.isEmpty) {
+      final (startW, endW) = _sentenceBounds[_currentSentence];
+
+      // Skip empty sentences (heading-only)
+      if (startW == endW) {
         _currentSentence++;
         continue;
       }
 
-      final sentenceNormalized = _normalize(sentenceText);
-      if (sentenceNormalized.isEmpty) {
+      // If we're past the end of this sentence, advance
+      if (currentWordIdx >= endW) {
         _currentSentence++;
         continue;
       }
 
-      // Find where this sentence starts in the normalized source
-      var searchFrom = 0;
-      for (var i = 0; i < _currentSentence; i++) {
-        final prevNorm = _normalize(script.sentences[i].rawText);
-        if (prevNorm.isNotEmpty) {
-          final idx = _normalizedSource.indexOf(prevNorm, searchFrom);
-          if (idx >= 0) {
-            searchFrom = idx + prevNorm.length;
-          }
-        }
-      }
-
-      final sentenceStart = _normalizedSource.indexOf(sentenceNormalized, searchFrom);
-      if (sentenceStart < 0) return;
-
-      final sentenceEnd = sentenceStart + sentenceNormalized.length;
-      final normalizedRecognized = _recognizedCharCount.clamp(0, _normalizedSource.length);
-
-      // Check if we've gone well past the current sentence
-      if (normalizedRecognized >= sentenceEnd) {
+      // Check if >50% of the sentence words have been matched
+      final sentenceWordCount = endW - startW;
+      final wordsMatched = (currentWordIdx - startW).clamp(0, sentenceWordCount);
+      if (wordsMatched > sentenceWordCount ~/ 2) {
         _currentSentence++;
         continue;
       }
 
-      // Calculate how much of the sentence has been matched
-      if (normalizedRecognized > sentenceStart) {
-        final matchedInSentence = (normalizedRecognized - sentenceStart)
-            .clamp(0, sentenceNormalized.length);
-        final matchRatio = matchedInSentence / sentenceNormalized.length;
-
-        // Advance to next sentence when >50% matched
-        if (matchRatio > 0.5 &&
-            normalizedRecognized >= sentenceStart + sentenceNormalized.length ~/ 2) {
-          _currentSentence++;
-          continue;
-        }
-      }
-
-      // Not enough progress to advance further
       break;
     }
   }
