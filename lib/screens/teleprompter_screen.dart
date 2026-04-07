@@ -46,7 +46,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
 
     _sub = _speech.events.listen((event) {
       if (event.type == SpeechEventType.transcript) {
-        final pos = _matcher.match(event.text);
+        final pos = _matcher.match(event.text, isFinal: event.isFinal);
         setState(() {
           _currentWord = pos;
           _lastTranscript = event.text;

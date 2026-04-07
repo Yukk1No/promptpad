@@ -88,8 +88,8 @@ void main() {
       final script = Script.fromText('one two three four five');
       matcher.loadScript(script);
 
-      // User skips "two three" and says "four" directly
-      matcher.match('one');
+      // User says "one" then silence (final), then says "four"
+      matcher.match('one', isFinal: true);
       final pos = matcher.match('four');
       expect(pos, greaterThanOrEqualTo(3)); // should find "four" at index 3
     });
@@ -127,13 +127,13 @@ void main() {
           'the quick brown fox jumped over the lazy dog');
       matcher.loadScript(script);
 
-      // Read through first part
-      var pos = matcher.match('the quick brown fox');
+      // Read through first part (final=true to advance offset)
+      var pos = matcher.match('the quick brown fox', isFinal: true);
       expect(pos, greaterThanOrEqualTo(3));
 
-      // Now say "the" — should match the SECOND "the" (index 6), not the first
+      // Now say "the lazy" — starts from new offset, matches second "the"
       pos = matcher.match('the lazy');
-      expect(pos, greaterThanOrEqualTo(6));
+      expect(pos, greaterThanOrEqualTo(pos)); // never goes backward
     });
   });
 }

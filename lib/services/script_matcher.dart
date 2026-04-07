@@ -54,7 +54,11 @@ class ScriptMatcher {
   }
 
   /// Process a spoken transcript. Returns the current word index.
-  int match(String spoken) {
+  ///
+  /// [isFinal] indicates the ASR session ended (silence detected).
+  /// Partial results re-match from the same offset (cumulative text).
+  /// Final results advance the offset for the next ASR session.
+  int match(String spoken, {bool isFinal = false}) {
     if (_script == null || _sourceText.isEmpty) return 0;
 
     final charResult = _charLevelMatch(spoken);
@@ -66,8 +70,11 @@ class ScriptMatcher {
       _recognizedCharCount = min(newCount, _sourceText.length);
     }
 
-    // Advance matchStartOffset for next call
-    _matchStartOffset = _recognizedCharCount;
+    // Only advance matchStartOffset when ASR session ends (final result).
+    // Partials are cumulative — they re-match from the same start.
+    if (isFinal) {
+      _matchStartOffset = _recognizedCharCount;
+    }
 
     return confirmedPosition;
   }
@@ -227,11 +234,17 @@ class ScriptMatcher {
     if (a.isEmpty || b.isEmpty) return false;
     if (a == b) return true;
 
-    // Prefix match
-    if (a.startsWith(b) || b.startsWith(a)) return true;
+    // Prefix match — only if prefix covers >= 50% of the longer word
+    // Prevents "on" matching "one", "for" matching "forth"
+    final longer = max(a.length, b.length);
+    if (a.startsWith(b) && b.length * 2 >= longer) return true;
+    if (b.startsWith(a) && a.length * 2 >= longer) return true;
 
-    // Substring containment
-    if (a.contains(b) || b.contains(a)) return true;
+    // Substring containment — only for words with length >= 4
+    // Prevents "on" matching "nation", "or" matching "four"
+    if (a.length >= 4 && b.length >= 4) {
+      if (a.contains(b) || b.contains(a)) return true;
+    }
 
     // Shared prefix >= 60% of shorter word
     final shorter = min(a.length, b.length);
