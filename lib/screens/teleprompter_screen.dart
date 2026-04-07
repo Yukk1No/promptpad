@@ -96,11 +96,15 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     if (_script.sentences.isEmpty) return;
     final newIndex = (_currentSentence + delta)
         .clamp(0, _script.sentences.length - 1);
+    _generation++; // invalidate stale ASR events
     _matcher.jumpToSentence(newIndex);
     setState(() {
       _currentSentence = newIndex;
       _currentWord = _matcher.confirmedPosition;
+      _lastTranscript = '';
     });
+    // Restart ASR to clear accumulated text
+    if (_isRunning) _speech.restart();
   }
 
   @override

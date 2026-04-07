@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Bottom overlay with play/pause, skip, font size, mirror toggle, and progress.
+/// Adapts to portrait (two rows) and landscape (single row).
 class ControlsOverlay extends StatefulWidget {
   final bool initialized;
   final bool isRunning;
@@ -42,17 +43,28 @@ class ControlsOverlay extends StatefulWidget {
 class _ControlsOverlayState extends State<ControlsOverlay> {
   bool _visible = true;
 
+  Widget _iconBtn(IconData icon, VoidCallback? onPressed, String tooltip) {
+    return IconButton(
+      icon: Icon(icon, size: 20),
+      onPressed: onPressed,
+      tooltip: tooltip,
+      constraints: const BoxConstraints(),
+      padding: const EdgeInsets.all(8),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final progress = widget.totalWords > 0
         ? widget.currentWord / widget.totalWords
         : 0.0;
-
-    final hasSkipTargets = widget.totalSentences > 0;
+    final hasSkip = widget.totalSentences > 0;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Stack(
       children: [
-        // Bottom layer: full-screen transparent tap target to toggle visibility
+        // Full-screen tap target to toggle visibility
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
@@ -79,125 +91,133 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
         if (_visible)
           Positioned(
             bottom: 8,
-            left: 16,
-            right: 16,
+            left: 12,
+            right: 12,
             child: SafeArea(
               child: GestureDetector(
-                // Prevent taps on the panel from toggling visibility
-                onTap: () {},
+                onTap: () {}, // absorb taps on panel
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.black87,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Row(
-                    children: [
-                      // Exit
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, size: 20),
-                        onPressed: widget.onExit,
-                        tooltip: 'Exit',
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
-
-                      const SizedBox(width: 4),
-
-                      // Play / Pause
-                      FilledButton.icon(
-                        onPressed: widget.initialized ? widget.onToggle : null,
-                        icon: Icon(widget.isRunning
-                            ? Icons.pause_rounded
-                            : Icons.mic_rounded,
-                            size: 18),
-                        label: Text(widget.isRunning ? 'Pause' : 'Start'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                        ),
-                      ),
-
-                      const SizedBox(width: 4),
-
-                      // Skip prev
-                      IconButton(
-                        icon: const Icon(Icons.skip_previous_rounded, size: 20),
-                        onPressed: hasSkipTargets
-                            ? () => widget.onSkip(-1)
-                            : null,
-                        tooltip: 'Previous sentence',
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
-
-                      // Skip next
-                      IconButton(
-                        icon: const Icon(Icons.skip_next_rounded, size: 20),
-                        onPressed: hasSkipTargets
-                            ? () => widget.onSkip(1)
-                            : null,
-                        tooltip: 'Next sentence',
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
-
-                      // Reset
-                      IconButton(
-                        icon: const Icon(Icons.replay_rounded, size: 20),
-                        onPressed: widget.onReset,
-                        tooltip: 'Reset',
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
-
-                      const Spacer(),
-
-                      // Font size
-                      const Icon(Icons.text_fields, size: 16,
-                          color: Colors.white54),
-                      SizedBox(
-                        width: 100,
-                        child: Slider(
-                          value: widget.fontSize,
-                          min: 24,
-                          max: 72,
-                          onChanged: widget.onFontSizeChanged,
-                        ),
-                      ),
-
-                      // Mirror toggle
-                      IconButton(
-                        icon: Icon(
-                          Icons.flip_rounded,
-                          size: 20,
-                          color: widget.mirrorMode
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.white54,
-                        ),
-                        onPressed: () =>
-                            widget.onMirrorChanged(!widget.mirrorMode),
-                        tooltip: 'Mirror mode',
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(8),
-                      ),
-
-                      const SizedBox(width: 4),
-
-                      // Sentence counter
-                      Text(
-                        '${widget.currentSentence + 1}/${widget.totalSentences}',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.white38),
-                      ),
-                    ],
-                  ),
+                  child: isLandscape
+                      ? _buildLandscapeRow(hasSkip)
+                      : _buildPortraitColumn(hasSkip),
                 ),
               ),
             ),
           ),
       ],
+    );
+  }
+
+  /// Single row for landscape
+  Widget _buildLandscapeRow(bool hasSkip) {
+    return Row(
+      children: [
+        _iconBtn(Icons.arrow_back_rounded, widget.onExit, 'Exit'),
+        const SizedBox(width: 4),
+        _playPauseButton(),
+        const SizedBox(width: 4),
+        _iconBtn(Icons.skip_previous_rounded,
+            hasSkip ? () => widget.onSkip(-1) : null, 'Prev'),
+        _iconBtn(Icons.skip_next_rounded,
+            hasSkip ? () => widget.onSkip(1) : null, 'Next'),
+        _iconBtn(Icons.replay_rounded, widget.onReset, 'Reset'),
+        const Spacer(),
+        _fontSlider(),
+        _mirrorButton(),
+        const SizedBox(width: 4),
+        _sentenceCounter(),
+      ],
+    );
+  }
+
+  /// Two rows for portrait
+  Widget _buildPortraitColumn(bool hasSkip) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Row 1: main controls
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _iconBtn(Icons.arrow_back_rounded, widget.onExit, 'Exit'),
+            const SizedBox(width: 8),
+            _iconBtn(Icons.skip_previous_rounded,
+                hasSkip ? () => widget.onSkip(-1) : null, 'Prev'),
+            const SizedBox(width: 4),
+            _playPauseButton(),
+            const SizedBox(width: 4),
+            _iconBtn(Icons.skip_next_rounded,
+                hasSkip ? () => widget.onSkip(1) : null, 'Next'),
+            const SizedBox(width: 8),
+            _iconBtn(Icons.replay_rounded, widget.onReset, 'Reset'),
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Row 2: font size, mirror, counter
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.text_fields, size: 14, color: Colors.white54),
+            _fontSlider(),
+            _mirrorButton(),
+            const SizedBox(width: 4),
+            _sentenceCounter(),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _playPauseButton() {
+    return FilledButton.icon(
+      onPressed: widget.initialized ? widget.onToggle : null,
+      icon: Icon(
+          widget.isRunning ? Icons.pause_rounded : Icons.mic_rounded,
+          size: 18),
+      label: Text(widget.isRunning ? 'Pause' : 'Start',
+          style: const TextStyle(fontSize: 13)),
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      ),
+    );
+  }
+
+  Widget _fontSlider() {
+    return SizedBox(
+      width: 100,
+      child: Slider(
+        value: widget.fontSize,
+        min: 24,
+        max: 72,
+        onChanged: widget.onFontSizeChanged,
+      ),
+    );
+  }
+
+  Widget _mirrorButton() {
+    return IconButton(
+      icon: Icon(Icons.flip_rounded,
+          size: 20,
+          color: widget.mirrorMode
+              ? Theme.of(context).colorScheme.primary
+              : Colors.white54),
+      onPressed: () => widget.onMirrorChanged(!widget.mirrorMode),
+      tooltip: 'Mirror',
+      constraints: const BoxConstraints(),
+      padding: const EdgeInsets.all(8),
+    );
+  }
+
+  Widget _sentenceCounter() {
+    return Text(
+      '${widget.currentSentence + 1}/${widget.totalSentences}',
+      style: const TextStyle(fontSize: 11, color: Colors.white38),
     );
   }
 }

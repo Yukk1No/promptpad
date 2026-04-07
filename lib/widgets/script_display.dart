@@ -145,7 +145,7 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
           token.raw,
           style: TextStyle(
             fontSize: widget.fontSize,
-            fontWeight: isCurrent ? FontWeight.bold : FontWeight.w300,
+            fontWeight: FontWeight.bold, // uniform weight prevents reflow on highlight change
             color: isCurrent
                 ? Theme.of(context).colorScheme.primary
                 : Colors.white,

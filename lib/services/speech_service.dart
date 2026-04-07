@@ -95,6 +95,16 @@ class SpeechService {
     }
   }
 
+  /// Restart the ASR session with a fresh accumulator.
+  /// Call this when the matcher position changes (reset/jump).
+  Future<void> restart() async {
+    if (!_isListening) return;
+    await _stt.stop();
+    _lastPartial = '';
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (_isListening) _listen(_locale);
+  }
+
   Future<void> stop() async {
     _isListening = false;
     await _stt.stop();
