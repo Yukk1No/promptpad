@@ -34,37 +34,106 @@ void main() {
     });
   });
 
-  group('ScriptMatcher', () {
-    test('matches spoken words to script position', () {
-      final script = Script.fromText(
-          'Four score and seven years ago our fathers brought forth');
-      final matcher = ScriptMatcher();
-      matcher.loadScript(script);
+  group('ScriptMatcher - forward-only sequential matching', () {
+    late ScriptMatcher matcher;
 
-      // Speak the first few words
-      var pos = matcher.match('four score and');
-      expect(pos, greaterThanOrEqualTo(0));
-      expect(pos, lessThan(script.tokens.length));
+    setUp(() {
+      matcher = ScriptMatcher();
     });
 
-    test('advances position with more speech', () {
-      final script = Script.fromText('one two three four five six seven');
-      final matcher = ScriptMatcher();
+    test('matches first words without jumping ahead', () {
+      final script = Script.fromText(
+          'Four score and seven years ago our fathers brought forth');
       matcher.loadScript(script);
 
-      final pos1 = matcher.match('one two');
-      final pos2 = matcher.match('three four five');
+      // "for" should match "four" (prefix match) at position 0,
+      // NOT jump to some other "for" in the middle
+      final pos = matcher.match('for');
+      expect(pos, 0); // stays at or near the start
+    });
+
+    test('advances sequentially with correct speech', () {
+      final script = Script.fromText('one two three four five six seven');
+      matcher.loadScript(script);
+
+      var pos = matcher.match('one two');
+      expect(pos, greaterThanOrEqualTo(1));
+
+      pos = matcher.match('three four five');
+      expect(pos, greaterThanOrEqualTo(4));
+    });
+
+    test('never goes backward', () {
+      final script = Script.fromText('the cat sat on the mat by the door');
+      matcher.loadScript(script);
+
+      final pos1 = matcher.match('the cat sat');
+      expect(pos1, greaterThanOrEqualTo(2));
+
+      // Even if ASR gives us "the" again, we should NOT jump back
+      final pos2 = matcher.match('the');
       expect(pos2, greaterThanOrEqualTo(pos1));
+    });
+
+    test('handles ASR hallucinated extra words', () {
+      final script = Script.fromText('hello world goodbye');
+      matcher.loadScript(script);
+
+      // ASR adds "uh" between real words
+      final pos = matcher.match('hello uh world');
+      expect(pos, greaterThanOrEqualTo(1)); // should match "world"
+    });
+
+    test('handles skipped source words', () {
+      final script = Script.fromText('one two three four five');
+      matcher.loadScript(script);
+
+      // User skips "two three" and says "four" directly
+      matcher.match('one');
+      final pos = matcher.match('four');
+      expect(pos, greaterThanOrEqualTo(3)); // should find "four" at index 3
+    });
+
+    test('fuzzy matches partial words', () {
+      final script = Script.fromText('constitution of the united states');
+      matcher.loadScript(script);
+
+      // ASR gives partial/mangled word
+      final pos = matcher.match('constitu');
+      expect(pos, 0); // prefix match on "constitution"
+    });
+
+    test('fuzzy matches with edit distance', () {
+      final script = Script.fromText('we hold these truths');
+      matcher.loadScript(script);
+
+      // ASR mishears "truths" as "truth"
+      final pos = matcher.match('we hold these truth');
+      expect(pos, greaterThanOrEqualTo(3));
     });
 
     test('reset returns to start', () {
       final script = Script.fromText('hello world foo bar');
-      final matcher = ScriptMatcher();
       matcher.loadScript(script);
 
       matcher.match('hello world');
       matcher.reset();
       expect(matcher.confirmedPosition, 0);
+    });
+
+    test('repeated words do not cause backward jumps', () {
+      // "the" appears multiple times
+      final script = Script.fromText(
+          'the quick brown fox jumped over the lazy dog');
+      matcher.loadScript(script);
+
+      // Read through first part
+      var pos = matcher.match('the quick brown fox');
+      expect(pos, greaterThanOrEqualTo(3));
+
+      // Now say "the" — should match the SECOND "the" (index 6), not the first
+      pos = matcher.match('the lazy');
+      expect(pos, greaterThanOrEqualTo(6));
     });
   });
 }
