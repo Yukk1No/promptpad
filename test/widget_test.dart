@@ -42,6 +42,10 @@ void main() {
       expect(script.sentences.length, 1);
       expect(script.sentences[0].heading, 'Slide 1 — Intro');
       expect(script.sentences[0].displayText, 'Welcome everyone.');
+      // Heading words should NOT be in tokens
+      expect(script.tokens.length, 2);
+      expect(script.tokens[0].normalized, 'welcome');
+      expect(script.tokens[1].normalized, 'everyone');
     });
 
     test('strips bold and italic markdown', () {
@@ -66,6 +70,9 @@ void main() {
       expect(script.sentences[0].displayText, 'First sentence.');
       expect(script.sentences[1].heading, isNull);
       expect(script.sentences[1].displayText, 'Second sentence.');
+      // Heading words excluded from tokens; only body words present
+      expect(script.tokens.length, 4); // First sentence Second sentence
+      expect(script.tokens[0].normalized, 'first');
     });
   });
 

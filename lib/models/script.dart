@@ -6,15 +6,33 @@ class Script {
 
   Script({required this.raw, required this.tokens, required this.sentences});
 
+  /// Shared normalization used by both Script and ScriptMatcher.
+  static String normalizeWord(String word) {
+    return word
+        .toLowerCase()
+        .replaceAll(RegExp(r"[^\w']"), '')
+        .replaceAll(RegExp(r"^'+|'+$"), '');
+  }
+
   factory Script.fromText(String text) {
-    final words = text.split(RegExp(r'\s+'));
+    // Pre-process: remove markdown heading lines so heading words
+    // do NOT become tokens. Headings only live in Sentence.heading.
+    final strippedText = text
+        .split('\n')
+        .where((line) => !RegExp(r'^\s*#{1,6}\s+').hasMatch(line))
+        .join('\n');
+
+    final words = strippedText.split(RegExp(r'\s+'));
     final tokens = <ScriptToken>[];
+    // Walk through strippedText with an explicit offset counter
     var offset = 0;
 
     for (final word in words) {
       if (word.isEmpty) continue;
-      final start = text.indexOf(word, offset);
-      final normalized = _normalize(word);
+      // Find the word starting from the current offset
+      final start = strippedText.indexOf(word, offset);
+      if (start < 0) continue;
+      final normalized = normalizeWord(word);
       final metaphone = doubleMetaphone(normalized);
       tokens.add(ScriptToken(
         index: tokens.length,
@@ -28,13 +46,6 @@ class Script {
 
     final sentences = _parseSentences(text);
     return Script(raw: text, tokens: tokens, sentences: sentences);
-  }
-
-  static String _normalize(String word) {
-    return word
-        .toLowerCase()
-        .replaceAll(RegExp(r"[^\w']"), '')
-        .replaceAll(RegExp(r"^'+|'+$"), '');
   }
 
   /// Parse text into sentences, splitting on sentence-ending punctuation

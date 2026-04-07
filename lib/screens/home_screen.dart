@@ -15,12 +15,6 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _historyKey = 'script_history';
   static const _maxHistory = 5;
 
-  final _sampleScript = '''Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
-
-Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived and so dedicated, can long endure. We are met on a great battle-field of that war. We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.
-
-But, in a larger sense, we can not dedicate — we can not consecrate — we can not hallow — this ground. The brave men, living and dead, who struggled here, have consecrated it, far above our poor power to add or detract.''';
-
   @override
   void initState() {
     super.initState();
@@ -203,36 +197,18 @@ But, in a larger sense, we can not dedicate — we can not consecrate — we can
               // Bottom action bar
               Padding(
                 padding: const EdgeInsets.all(24),
-                child: Row(
-                  children: [
-                    OutlinedButton(
-                      onPressed: () => _controller.text = _sampleScript,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 16),
-                        side: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withAlpha(128),
-                        ),
-                      ),
-                      child: const Text('Sample'),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _startPrompter,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Start Prompter'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      textStyle: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: _startPrompter,
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('Start Prompter'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          textStyle: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],

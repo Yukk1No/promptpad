@@ -126,53 +126,61 @@ class ScriptMatcher {
     final script = _script;
     if (script == null || script.sentences.isEmpty) return;
 
-    // Check if we've matched enough of the current sentence to advance
-    final currentSentenceObj = script.sentences[_currentSentence];
-    final sentenceText = currentSentenceObj.rawText;
-    if (sentenceText.isEmpty) return;
+    // Use a while loop to advance through multiple sentences if needed
+    while (_currentSentence < script.sentences.length - 1) {
+      final currentSentenceObj = script.sentences[_currentSentence];
+      final sentenceText = currentSentenceObj.rawText;
+      if (sentenceText.isEmpty) {
+        _currentSentence++;
+        continue;
+      }
 
-    final sentenceNormalized = _normalize(sentenceText);
-    if (sentenceNormalized.isEmpty) return;
+      final sentenceNormalized = _normalize(sentenceText);
+      if (sentenceNormalized.isEmpty) {
+        _currentSentence++;
+        continue;
+      }
 
-    // Find where this sentence starts in the normalized source
-    var searchFrom = 0;
-    for (var i = 0; i < _currentSentence; i++) {
-      final prevNorm = _normalize(script.sentences[i].rawText);
-      if (prevNorm.isNotEmpty) {
-        final idx = _normalizedSource.indexOf(prevNorm, searchFrom);
-        if (idx >= 0) {
-          searchFrom = idx + prevNorm.length;
+      // Find where this sentence starts in the normalized source
+      var searchFrom = 0;
+      for (var i = 0; i < _currentSentence; i++) {
+        final prevNorm = _normalize(script.sentences[i].rawText);
+        if (prevNorm.isNotEmpty) {
+          final idx = _normalizedSource.indexOf(prevNorm, searchFrom);
+          if (idx >= 0) {
+            searchFrom = idx + prevNorm.length;
+          }
         }
       }
-    }
 
-    final sentenceStart = _normalizedSource.indexOf(sentenceNormalized, searchFrom);
-    if (sentenceStart < 0) return;
+      final sentenceStart = _normalizedSource.indexOf(sentenceNormalized, searchFrom);
+      if (sentenceStart < 0) return;
 
-    final sentenceEnd = sentenceStart + sentenceNormalized.length;
-    final normalizedRecognized = _recognizedCharCount.clamp(0, _normalizedSource.length);
+      final sentenceEnd = sentenceStart + sentenceNormalized.length;
+      final normalizedRecognized = _recognizedCharCount.clamp(0, _normalizedSource.length);
 
-    // Calculate how much of the sentence has been matched
-    if (normalizedRecognized > sentenceStart) {
-      final matchedInSentence = (normalizedRecognized - sentenceStart)
-          .clamp(0, sentenceNormalized.length);
-      final matchRatio = matchedInSentence / sentenceNormalized.length;
+      // Check if we've gone well past the current sentence
+      if (normalizedRecognized >= sentenceEnd) {
+        _currentSentence++;
+        continue;
+      }
 
-      // Advance to next sentence when >50% matched
-      if (matchRatio > 0.5 && _currentSentence < script.sentences.length - 1) {
-        // Check if we're past the midpoint of the sentence
-        if (normalizedRecognized >= sentenceStart + sentenceNormalized.length ~/ 2) {
+      // Calculate how much of the sentence has been matched
+      if (normalizedRecognized > sentenceStart) {
+        final matchedInSentence = (normalizedRecognized - sentenceStart)
+            .clamp(0, sentenceNormalized.length);
+        final matchRatio = matchedInSentence / sentenceNormalized.length;
+
+        // Advance to next sentence when >50% matched
+        if (matchRatio > 0.5 &&
+            normalizedRecognized >= sentenceStart + sentenceNormalized.length ~/ 2) {
           _currentSentence++;
+          continue;
         }
       }
-    }
 
-    // Also check if we've gone well past the current sentence
-    if (normalizedRecognized >= sentenceEnd &&
-        _currentSentence < script.sentences.length - 1) {
-      _currentSentence++;
-      // Recursively check in case we skipped multiple sentences
-      _updateSentenceFromCharCount();
+      // Not enough progress to advance further
+      break;
     }
   }
 
@@ -187,7 +195,7 @@ class ScriptMatcher {
 
     var si = 0; // source index
     var ri = 0; // recognition (spoken) index
-    var lastGoodOrigIndex = 0;
+    var lastGoodOrigIndex = -1;
 
     while (si < remainingSource.length && ri < normalizedSpoken.length) {
       final sc = remainingSource[si];
@@ -235,13 +243,12 @@ class ScriptMatcher {
       }
       if (synced) continue;
 
-      // Neither — treat as substitution, record progress
-      lastGoodOrigIndex = si;
+      // Neither — treat as substitution, do NOT record progress
       si++;
       ri++;
     }
 
-    return lastGoodOrigIndex;
+    return lastGoodOrigIndex + 1;
   }
 
   /// Word-level match on the remaining source suffix.
@@ -399,9 +406,12 @@ class ScriptMatcher {
   }
 
   String _normalize(String text) {
+    // Normalize each word using the shared normalizer, preserving spaces
     return text
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9 ]'), '');
+        .split(RegExp(r'\s+'))
+        .map((w) => Script.normalizeWord(w))
+        .join(' ')
+        .trim();
   }
 
   bool _isAlnum(String c) {

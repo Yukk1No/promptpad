@@ -4,14 +4,12 @@ import '../models/script.dart';
 
 /// Displays the script with word-level highlighting and auto-scroll.
 /// Includes a reference line at 1/3 from top.
-/// Swipe up/down to skip sentences.
 class ScriptDisplay extends StatefulWidget {
   final Script script;
   final int currentWord;
   final int currentSentence;
   final double fontSize;
   final bool mirror;
-  final ValueChanged<int>? onSwipeSkip;
 
   const ScriptDisplay({
     super.key,
@@ -20,7 +18,6 @@ class ScriptDisplay extends StatefulWidget {
     required this.currentSentence,
     required this.fontSize,
     this.mirror = false,
-    this.onSwipeSkip,
   });
 
   @override
@@ -137,18 +134,7 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
       sentenceStartWord.putIfAbsent(entry.value, () => entry.key);
     }
 
-    final child = GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onVerticalDragEnd: (details) {
-        if (widget.onSwipeSkip == null) return;
-        final velocity = details.primaryVelocity ?? 0;
-        if (velocity < -200) {
-          widget.onSwipeSkip!(1); // swipe up = next
-        } else if (velocity > 200) {
-          widget.onSwipeSkip!(-1); // swipe down = previous
-        }
-      },
-      child: Stack(
+    final child = Stack(
         children: [
           SingleChildScrollView(
             controller: _scrollController,
@@ -226,7 +212,6 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
             ),
           ),
         ],
-      ),
     );
 
     if (widget.mirror) {

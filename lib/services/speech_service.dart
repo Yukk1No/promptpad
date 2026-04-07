@@ -10,6 +10,7 @@ class SpeechService {
   final _controller = StreamController<SpeechEvent>.broadcast();
   bool _isListening = false;
   String _lastPartial = '';
+  String _locale = 'en-US';
 
   Stream<SpeechEvent> get events => _controller.stream;
   bool get isListening => _isListening;
@@ -27,6 +28,7 @@ class SpeechService {
     if (_isListening) return;
     _isListening = true;
     _lastPartial = '';
+    _locale = locale;
     _listen(locale);
   }
 
@@ -59,7 +61,7 @@ class SpeechService {
     // speech_to_text stops after silence; auto-restart for continuous listening
     if (status == 'notListening' && _isListening) {
       Future.delayed(const Duration(milliseconds: 100), () {
-        if (_isListening) _listen('en-US');
+        if (_isListening) _listen(_locale);
       });
     }
   }

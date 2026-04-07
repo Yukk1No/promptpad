@@ -125,7 +125,6 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
             currentSentence: _currentSentence,
             fontSize: _fontSize,
             mirror: _mirrorMode,
-            onSwipeSkip: _skipSentence,
           ),
 
           if (_lastTranscript.isNotEmpty)

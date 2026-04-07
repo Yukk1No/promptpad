@@ -49,7 +49,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
         : 0.0;
 
     return GestureDetector(
-      behavior: HitTestBehavior.translucent,
+      behavior: HitTestBehavior.deferToChild,
       onTap: () => setState(() => _visible = !_visible),
       child: Stack(
         children: [
