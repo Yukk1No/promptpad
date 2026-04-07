@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
 
 class PromptPadApp extends StatelessWidget {
@@ -18,9 +17,7 @@ class PromptPadApp extends StatelessWidget {
           secondary: Color(0xFF03DAC6),
           surface: Color(0xFF121212),
         ),
-        textTheme: GoogleFonts.notoSansTextTheme(
-          ThemeData.dark().textTheme,
-        ),
+        fontFamily: '.SF Pro Text',
       ),
       home: const HomeScreen(),
     );
