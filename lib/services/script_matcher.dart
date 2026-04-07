@@ -154,38 +154,35 @@ class ScriptMatcher {
   }
 
   /// Update the current sentence index based on how far we've matched.
+  /// Advances at most one sentence per call to prevent runaway skipping.
   void _updateSentenceFromCharCount() {
     final script = _script;
     if (script == null || script.sentences.isEmpty) return;
     if (_sentenceBounds.isEmpty) return;
+    if (_currentSentence >= script.sentences.length - 1) return;
 
     // Use pre-computed bounds to determine sentence from char count.
     final currentWordIdx = _charCountToWordIndex(_recognizedCharCount);
 
-    while (_currentSentence < script.sentences.length - 1) {
-      final (startW, endW) = _sentenceBounds[_currentSentence];
+    final (startW, endW) = _sentenceBounds[_currentSentence];
 
-      // Skip empty sentences (heading-only)
-      if (startW == endW) {
-        _currentSentence++;
-        continue;
-      }
+    // Skip empty sentences (heading-only)
+    if (startW == endW) {
+      _currentSentence++;
+      return;
+    }
 
-      // If we're past the end of this sentence, advance
-      if (currentWordIdx >= endW) {
-        _currentSentence++;
-        continue;
-      }
+    // If we're past the end of this sentence, advance
+    if (currentWordIdx >= endW) {
+      _currentSentence++;
+      return;
+    }
 
-      // Check if >50% of the sentence words have been matched
-      final sentenceWordCount = endW - startW;
-      final wordsMatched = (currentWordIdx - startW).clamp(0, sentenceWordCount);
-      if (wordsMatched > sentenceWordCount ~/ 2) {
-        _currentSentence++;
-        continue;
-      }
-
-      break;
+    // Check if >50% of the sentence words have been matched
+    final sentenceWordCount = endW - startW;
+    final wordsMatched = (currentWordIdx - startW).clamp(0, sentenceWordCount);
+    if (wordsMatched > sentenceWordCount ~/ 2) {
+      _currentSentence++;
     }
   }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import '../models/script.dart';
@@ -32,14 +33,22 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   double _fontSize = 42;
   bool _mirrorMode = false;
   String _lastTranscript = '';
-  int _generation = 0;
+  String _locale = 'en-US';
+  bool _onDevice = true;
 
   @override
   void initState() {
     super.initState();
     _script = Script.fromText(widget.scriptText);
     _matcher.loadScript(_script);
+    _loadSettings();
     _initSpeech();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _locale = prefs.getString('speech_locale') ?? 'en-US';
+    _onDevice = prefs.getBool('on_device') ?? true;
   }
 
   Future<void> _initSpeech() async {
@@ -52,9 +61,10 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
 
     _sub = _speech.events.listen((event) {
       if (event.type == SpeechEventType.transcript) {
-        final gen = _generation;
+        // Check epoch BEFORE match() to avoid mutating matcher state with stale events
+        if (event.epoch != _speech.epoch) return;
         final pos = _matcher.match(event.text, isFinal: event.isFinal);
-        if (gen != _generation) return;
+        if (event.epoch != _speech.epoch) return; // recheck after async gap
         setState(() {
           _currentWord = pos;
           _currentSentence = _matcher.currentSentence;
@@ -71,7 +81,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
       _speech.stop();
       _stopScreenKeepAlive();
     } else {
-      _speech.start();
+      _speech.start(locale: _locale, onDevice: _onDevice);
       _startScreenKeepAlive();
     }
     setState(() => _isRunning = !_isRunning);
@@ -109,7 +119,6 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   }
 
   void _resetPosition() async {
-    _generation++;
     final wasRunning = _isRunning;
     if (wasRunning) await _speech.stop();
     _matcher.reset();
@@ -122,7 +131,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     if (wasRunning) {
       await Future.delayed(const Duration(milliseconds: 200));
       if (mounted) {
-        _speech.start();
+        _speech.start(locale: _locale, onDevice: _onDevice);
         setState(() => _isRunning = true);
       }
     }
@@ -132,7 +141,6 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     if (_script.sentences.isEmpty) return;
     final newIndex = (_currentSentence + delta)
         .clamp(0, _script.sentences.length - 1);
-    _generation++;
     _matcher.jumpToSentence(newIndex);
     setState(() {
       _currentSentence = newIndex;
@@ -183,9 +191,10 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
               currentSentence: _currentSentence,
               fontSize: _fontSize,
               mirror: _mirrorMode,
+              onSkip: _skipSentence,
             ),
 
-            // Transcript bar — single line, auto-truncated
+            // Transcript bar — last ~50 chars, right-aligned with left ellipsis
             if (_lastTranscript.isNotEmpty && _isRunning)
               Positioned(
                 top: 0,
@@ -195,11 +204,15 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
                   color: Colors.black54,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 6),
+                  height: 28,
+                  alignment: Alignment.centerRight,
                   child: Text(
-                    _lastTranscript,
+                    _lastTranscript.length > 50
+                        ? '...\u200B${_lastTranscript.substring(_lastTranscript.length - 50)}'
+                        : _lastTranscript,
                     style: const TextStyle(fontSize: 11, color: Colors.white30),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.clip,
                   ),
                 ),
               ),
@@ -215,7 +228,6 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
               totalSentences: _script.sentences.length,
               onToggle: _toggle,
               onReset: _resetPosition,
-              onSkip: _skipSentence,
               onFontSizeChanged: (v) => setState(() => _fontSize = v),
               onMirrorChanged: (v) => setState(() => _mirrorMode = v),
               onExit: () => Navigator.pop(context),

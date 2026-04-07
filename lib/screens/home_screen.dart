@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'teleprompter_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -164,6 +165,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         tooltip: 'Recent scripts',
                         color: Colors.white54,
                       ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.settings_rounded),
+                      tooltip: 'Settings',
+                      color: Colors.white54,
+                    ),
                   ],
                 ),
               ),

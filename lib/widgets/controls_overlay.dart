@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Bottom overlay with play/pause, skip, font size, mirror toggle, and progress.
+/// Bottom overlay with play/pause, font size, mirror toggle, and progress.
 /// Adapts to portrait (two rows) and landscape (single row).
+/// Skip prev/next buttons have moved to ScriptDisplay corners.
 class ControlsOverlay extends StatefulWidget {
   final bool initialized;
   final bool isRunning;
@@ -13,7 +14,6 @@ class ControlsOverlay extends StatefulWidget {
   final int totalSentences;
   final VoidCallback onToggle;
   final VoidCallback onReset;
-  final ValueChanged<int> onSkip;
   final ValueChanged<double> onFontSizeChanged;
   final ValueChanged<bool> onMirrorChanged;
   final VoidCallback onExit;
@@ -30,7 +30,6 @@ class ControlsOverlay extends StatefulWidget {
     required this.totalSentences,
     required this.onToggle,
     required this.onReset,
-    required this.onSkip,
     required this.onFontSizeChanged,
     required this.onMirrorChanged,
     required this.onExit,
@@ -58,7 +57,6 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
     final progress = widget.totalWords > 0
         ? widget.currentWord / widget.totalWords
         : 0.0;
-    final hasSkip = widget.totalSentences > 0;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
@@ -104,8 +102,8 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: isLandscape
-                      ? _buildLandscapeRow(hasSkip)
-                      : _buildPortraitColumn(hasSkip),
+                      ? _buildLandscapeRow()
+                      : _buildPortraitColumn(),
                 ),
               ),
             ),
@@ -115,20 +113,16 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   }
 
   /// Single row for landscape
-  Widget _buildLandscapeRow(bool hasSkip) {
+  Widget _buildLandscapeRow() {
     return Row(
       children: [
         _iconBtn(Icons.arrow_back_rounded, widget.onExit, 'Exit'),
         const SizedBox(width: 4),
         _playPauseButton(),
         const SizedBox(width: 4),
-        _iconBtn(Icons.skip_previous_rounded,
-            hasSkip ? () => widget.onSkip(-1) : null, 'Prev'),
-        _iconBtn(Icons.skip_next_rounded,
-            hasSkip ? () => widget.onSkip(1) : null, 'Next'),
         _iconBtn(Icons.replay_rounded, widget.onReset, 'Reset'),
         const Spacer(),
-        _fontSlider(),
+        _fontSizeButtons(),
         _mirrorButton(),
         const SizedBox(width: 4),
         _sentenceCounter(),
@@ -137,7 +131,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
   }
 
   /// Two rows for portrait
-  Widget _buildPortraitColumn(bool hasSkip) {
+  Widget _buildPortraitColumn() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -147,13 +141,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
           children: [
             _iconBtn(Icons.arrow_back_rounded, widget.onExit, 'Exit'),
             const SizedBox(width: 8),
-            _iconBtn(Icons.skip_previous_rounded,
-                hasSkip ? () => widget.onSkip(-1) : null, 'Prev'),
-            const SizedBox(width: 4),
             _playPauseButton(),
-            const SizedBox(width: 4),
-            _iconBtn(Icons.skip_next_rounded,
-                hasSkip ? () => widget.onSkip(1) : null, 'Next'),
             const SizedBox(width: 8),
             _iconBtn(Icons.replay_rounded, widget.onReset, 'Reset'),
           ],
@@ -163,8 +151,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.text_fields, size: 14, color: Colors.white54),
-            _fontSlider(),
+            _fontSizeButtons(),
             _mirrorButton(),
             const SizedBox(width: 4),
             _sentenceCounter(),
@@ -188,15 +175,35 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
     );
   }
 
-  Widget _fontSlider() {
-    return SizedBox(
-      width: 100,
-      child: Slider(
-        value: widget.fontSize,
-        min: 24,
-        max: 72,
-        onChanged: widget.onFontSizeChanged,
-      ),
+  Widget _fontSizeButtons() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.text_decrease, size: 18),
+          onPressed: widget.fontSize > 28
+              ? () => widget.onFontSizeChanged(
+                    (widget.fontSize - 4).clamp(28, 56))
+              : null,
+          tooltip: 'Smaller text',
+          constraints: const BoxConstraints(),
+          padding: const EdgeInsets.all(6),
+        ),
+        Text(
+          '${widget.fontSize.round()}',
+          style: const TextStyle(fontSize: 11, color: Colors.white38),
+        ),
+        IconButton(
+          icon: const Icon(Icons.text_increase, size: 18),
+          onPressed: widget.fontSize < 56
+              ? () => widget.onFontSizeChanged(
+                    (widget.fontSize + 4).clamp(28, 56))
+              : null,
+          tooltip: 'Larger text',
+          constraints: const BoxConstraints(),
+          padding: const EdgeInsets.all(6),
+        ),
+      ],
     );
   }
 

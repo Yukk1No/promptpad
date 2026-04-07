@@ -12,9 +12,13 @@ class SpeechService {
   bool _disposed = false;
   String _lastPartial = '';
   String _locale = 'en-US';
+  int _resultEpoch = 0;
+  bool _manualRestart = false;
+  bool _onDevice = true;
 
   Stream<SpeechEvent> get events => _controller.stream;
   bool get isListening => _isListening;
+  int get epoch => _resultEpoch;
 
   Future<bool> initialize() async {
     return _stt.initialize(
@@ -27,19 +31,21 @@ class SpeechService {
     );
   }
 
-  Future<void> start({String locale = 'en-US'}) async {
+  Future<void> start({String locale = 'en-US', bool onDevice = true}) async {
     if (_isListening) return;
     _lastPartial = '';
     _locale = locale;
+    _onDevice = onDevice;
     try {
+      final epoch = ++_resultEpoch;
       _stt.listen(
-        onResult: _onResult,
+        onResult: (result) => _onResult(result, epoch),
         localeId: locale,
         listenOptions: SpeechListenOptions(
           listenMode: ListenMode.dictation,
           partialResults: true,
           cancelOnError: false,
-          onDevice: true,
+          onDevice: onDevice,
         ),
       );
       _isListening = true;
@@ -51,7 +57,8 @@ class SpeechService {
     }
   }
 
-  void _onResult(SpeechRecognitionResult result) {
+  void _onResult(SpeechRecognitionResult result, int epoch) {
+    if (epoch != _resultEpoch) return; // discard stale session results
     _sessionStart = DateTime.now(); // got a result, session is alive
     final text = result.recognizedWords;
     // Only suppress duplicate non-final partials. Always forward final results.
@@ -63,6 +70,7 @@ class SpeechService {
         text: text,
         isFinal: result.finalResult,
         confidence: result.confidence,
+        epoch: epoch,
       ));
     }
   }
@@ -71,10 +79,10 @@ class SpeechService {
 
   void _onStatus(String status) {
     // speech_to_text stops after silence; auto-restart for continuous listening
-    if (status == 'notListening' && _isListening) {
+    if (status == 'notListening' && _isListening && !_manualRestart) {
       _lastPartial = ''; // clear accumulated text for fresh session
       Future.delayed(const Duration(milliseconds: 150), () {
-        if (_isListening && !_disposed) _listen(_locale);
+        if (_isListening && !_disposed && !_manualRestart) _listen(_locale);
       });
     }
   }
@@ -94,14 +102,15 @@ class SpeechService {
 
   void _listen(String locale) {
     try {
+      final epoch = ++_resultEpoch;
       _stt.listen(
-        onResult: _onResult,
+        onResult: (result) => _onResult(result, epoch),
         localeId: locale,
         listenOptions: SpeechListenOptions(
           listenMode: ListenMode.dictation,
           partialResults: true,
           cancelOnError: false,
-          onDevice: true,
+          onDevice: _onDevice,
         ),
       );
     } catch (e) {
@@ -116,10 +125,14 @@ class SpeechService {
   /// Call this when the matcher position changes (reset/jump).
   Future<void> restart() async {
     if (!_isListening) return;
+    _manualRestart = true;
+    _resultEpoch++; // invalidate in-flight results before stop
     await _stt.stop();
     _lastPartial = '';
+    _resultEpoch++; // invalidate any results queued during stop
     await Future.delayed(const Duration(milliseconds: 100));
-    if (_isListening) _listen(_locale);
+    _manualRestart = false;
+    if (_isListening && !_disposed) _listen(_locale);
   }
 
   Future<void> stop() async {
@@ -142,24 +155,28 @@ class SpeechEvent {
   final String text;
   final bool isFinal;
   final double confidence;
+  final int epoch;
 
   SpeechEvent._({
     required this.type,
     required this.text,
     this.isFinal = false,
     this.confidence = 0.0,
+    this.epoch = 0,
   });
 
   factory SpeechEvent.transcript({
     required String text,
     required bool isFinal,
     required double confidence,
+    required int epoch,
   }) =>
       SpeechEvent._(
         type: SpeechEventType.transcript,
         text: text,
         isFinal: isFinal,
         confidence: confidence,
+        epoch: epoch,
       );
 
   factory SpeechEvent.error(String message) =>
