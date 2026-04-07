@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash \"C:/Users/yuk1no/.claude/plugins/marketplaces/omc/scripts/setup-progress.sh\" resume)",
+      "Bash([ -f \"$HOME/.claude/CLAUDE.md\" ])",
+      "Bash(bash:*)",
+      "Bash(node:*)",
+      "Bash(npm view:*)",
+      "Bash(npm install:*)",
+      "Bash(claude mcp:*)",
+      "Bash(gh auth:*)",
+      "Bash(command -v omc)",
+      "Bash(omc --version)",
+      "Bash(gh api:*)",
+      "Bash(winget install:*)",
+      "Bash(jq --version)",
+      "Bash(where jq:*)",
+      "Bash(cmd.exe /c \"where jq\")",
+      "Bash(powershell.exe -Command \"Get-Command jq -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")"
+    ]
+  }
+}

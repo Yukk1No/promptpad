@@ -1,0 +1,4 @@
+{"t":0,"agent":"aa4c8ff","agent_type":"document-specialist","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"aa4c8ff","agent_type":"document-specialist","event":"agent_stop","success":true,"duration_ms":100964}
+{"t":0,"agent":"a218a54","agent_type":"executor","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a218a54","agent_type":"executor","event":"agent_stop","success":true,"duration_ms":301671}

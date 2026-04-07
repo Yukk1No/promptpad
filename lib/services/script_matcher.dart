@@ -1,11 +1,11 @@
 import 'dart:math';
 import '../models/script.dart';
 
-/// Direct port of textream's SpeechRecognizer matching algorithm.
+/// Sentence-level speech matcher built on textream's dual-strategy approach.
 ///
-/// Tracks position by character count in a collapsed source string.
-/// Dual strategy: charLevelMatch + wordLevelMatch, best (max) wins.
-/// Only moves forward (recognizedCharCount never decreases).
+/// Matches spoken text against the current sentence's text.
+/// When >50% of the sentence is matched, advances to the next sentence.
+/// Also exposes word-level position for backward compatibility.
 class ScriptMatcher {
   Script? _script;
 
@@ -24,6 +24,12 @@ class ScriptMatcher {
   /// Total recognized characters so far (monotonically increasing).
   int _recognizedCharCount = 0;
 
+  /// Current sentence index.
+  int _currentSentence = 0;
+
+  int get currentSentence => _currentSentence;
+  int get totalSentences => _script?.sentences.length ?? 0;
+
   int get confirmedPosition => _charCountToWordIndex(_recognizedCharCount);
 
   void loadScript(Script script) {
@@ -33,11 +39,13 @@ class ScriptMatcher {
     _sourceWords = _sourceText.split(RegExp(r'\s+'));
     _matchStartOffset = 0;
     _recognizedCharCount = 0;
+    _currentSentence = 0;
   }
 
   void reset() {
     _matchStartOffset = 0;
     _recognizedCharCount = 0;
+    _currentSentence = 0;
   }
 
   void jumpTo(int wordIndex) {
@@ -51,6 +59,37 @@ class ScriptMatcher {
     }
     _recognizedCharCount = charPos;
     _matchStartOffset = charPos;
+  }
+
+  /// Jump to a specific sentence index.
+  void jumpToSentence(int sentenceIndex) {
+    final script = _script;
+    if (script == null || script.sentences.isEmpty) return;
+    _currentSentence = sentenceIndex.clamp(0, script.sentences.length - 1);
+
+    // Also update char-level tracking to match the sentence boundary
+    final sentence = script.sentences[_currentSentence];
+    // Find the char offset of this sentence's first word in the source text
+    final sentenceNormalized = _normalize(sentence.rawText);
+    if (sentenceNormalized.isNotEmpty) {
+      // Search for the sentence start in the normalized source
+      // We find the Nth occurrence by tracking sentences before this one
+      var searchFrom = 0;
+      for (var i = 0; i < _currentSentence; i++) {
+        final prevNorm = _normalize(script.sentences[i].rawText);
+        if (prevNorm.isNotEmpty) {
+          final idx = _normalizedSource.indexOf(prevNorm, searchFrom);
+          if (idx >= 0) {
+            searchFrom = idx + prevNorm.length;
+          }
+        }
+      }
+      final idx = _normalizedSource.indexOf(sentenceNormalized, searchFrom);
+      if (idx >= 0) {
+        _recognizedCharCount = idx;
+        _matchStartOffset = idx;
+      }
+    }
   }
 
   /// Process a spoken transcript. Returns the current word index.
@@ -76,7 +115,65 @@ class ScriptMatcher {
       _matchStartOffset = _recognizedCharCount;
     }
 
+    // Update sentence index based on match progress
+    _updateSentenceFromCharCount();
+
     return confirmedPosition;
+  }
+
+  /// Update the current sentence index based on how far we've matched.
+  void _updateSentenceFromCharCount() {
+    final script = _script;
+    if (script == null || script.sentences.isEmpty) return;
+
+    // Check if we've matched enough of the current sentence to advance
+    final currentSentenceObj = script.sentences[_currentSentence];
+    final sentenceText = currentSentenceObj.rawText;
+    if (sentenceText.isEmpty) return;
+
+    final sentenceNormalized = _normalize(sentenceText);
+    if (sentenceNormalized.isEmpty) return;
+
+    // Find where this sentence starts in the normalized source
+    var searchFrom = 0;
+    for (var i = 0; i < _currentSentence; i++) {
+      final prevNorm = _normalize(script.sentences[i].rawText);
+      if (prevNorm.isNotEmpty) {
+        final idx = _normalizedSource.indexOf(prevNorm, searchFrom);
+        if (idx >= 0) {
+          searchFrom = idx + prevNorm.length;
+        }
+      }
+    }
+
+    final sentenceStart = _normalizedSource.indexOf(sentenceNormalized, searchFrom);
+    if (sentenceStart < 0) return;
+
+    final sentenceEnd = sentenceStart + sentenceNormalized.length;
+    final normalizedRecognized = _recognizedCharCount.clamp(0, _normalizedSource.length);
+
+    // Calculate how much of the sentence has been matched
+    if (normalizedRecognized > sentenceStart) {
+      final matchedInSentence = (normalizedRecognized - sentenceStart)
+          .clamp(0, sentenceNormalized.length);
+      final matchRatio = matchedInSentence / sentenceNormalized.length;
+
+      // Advance to next sentence when >50% matched
+      if (matchRatio > 0.5 && _currentSentence < script.sentences.length - 1) {
+        // Check if we're past the midpoint of the sentence
+        if (normalizedRecognized >= sentenceStart + sentenceNormalized.length ~/ 2) {
+          _currentSentence++;
+        }
+      }
+    }
+
+    // Also check if we've gone well past the current sentence
+    if (normalizedRecognized >= sentenceEnd &&
+        _currentSentence < script.sentences.length - 1) {
+      _currentSentence++;
+      // Recursively check in case we skipped multiple sentences
+      _updateSentenceFromCharCount();
+    }
   }
 
   /// Character-level fuzzy match on the remaining source suffix.
@@ -235,13 +332,11 @@ class ScriptMatcher {
     if (a == b) return true;
 
     // Prefix match — only if prefix covers >= 50% of the longer word
-    // Prevents "on" matching "one", "for" matching "forth"
     final longer = max(a.length, b.length);
     if (a.startsWith(b) && b.length * 2 >= longer) return true;
     if (b.startsWith(a) && a.length * 2 >= longer) return true;
 
     // Substring containment — only for words with length >= 4
-    // Prevents "on" matching "nation", "or" matching "four"
     if (a.length >= 4 && b.length >= 4) {
       if (a.contains(b) || b.contains(a)) return true;
     }

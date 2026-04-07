@@ -1,9 +1,10 @@
-/// A tokenized script ready for matching.
+/// A parsed script with sentence-level and word-level structure.
 class Script {
   final String raw;
   final List<ScriptToken> tokens;
+  final List<Sentence> sentences;
 
-  Script({required this.raw, required this.tokens});
+  Script({required this.raw, required this.tokens, required this.sentences});
 
   factory Script.fromText(String text) {
     final words = text.split(RegExp(r'\s+'));
@@ -24,7 +25,9 @@ class Script {
       ));
       offset = start + word.length;
     }
-    return Script(raw: text, tokens: tokens);
+
+    final sentences = _parseSentences(text);
+    return Script(raw: text, tokens: tokens, sentences: sentences);
   }
 
   static String _normalize(String word) {
@@ -32,6 +35,109 @@ class Script {
         .toLowerCase()
         .replaceAll(RegExp(r"[^\w']"), '')
         .replaceAll(RegExp(r"^'+|'+$"), '');
+  }
+
+  /// Parse text into sentences, splitting on sentence-ending punctuation
+  /// or double-newlines. Markdown headings become section annotations.
+  static List<Sentence> _parseSentences(String text) {
+    final sentences = <Sentence>[];
+
+    // Split on double-newline first to get paragraphs
+    final paragraphs = text.split(RegExp(r'\n\s*\n'));
+    String? pendingHeading;
+
+    for (final paragraph in paragraphs) {
+      final trimmed = paragraph.trim();
+      if (trimmed.isEmpty) continue;
+
+      // Split paragraph into lines to detect markdown headings
+      final lines = trimmed.split('\n');
+      final buffer = StringBuffer();
+
+      for (final line in lines) {
+        final trimmedLine = line.trim();
+
+        // Check for markdown heading
+        final headingMatch = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(trimmedLine);
+        if (headingMatch != null) {
+          // Flush any buffered text as sentences before setting heading
+          if (buffer.isNotEmpty) {
+            _splitIntoSentences(buffer.toString(), sentences, pendingHeading);
+            pendingHeading = null;
+            buffer.clear();
+          }
+          pendingHeading = headingMatch.group(2)!.trim();
+          continue;
+        }
+
+        if (buffer.isNotEmpty) buffer.write(' ');
+        buffer.write(trimmedLine);
+      }
+
+      if (buffer.isNotEmpty) {
+        _splitIntoSentences(buffer.toString(), sentences, pendingHeading);
+        pendingHeading = null;
+      }
+    }
+
+    // If there's a trailing heading with no text after it, add it as empty sentence
+    if (pendingHeading != null) {
+      sentences.add(Sentence(
+        index: sentences.length,
+        rawText: '',
+        displayText: '',
+        heading: pendingHeading,
+      ));
+    }
+
+    return sentences;
+  }
+
+  /// Split a block of text into sentences on `.` `?` `!`
+  static void _splitIntoSentences(
+    String text,
+    List<Sentence> sentences,
+    String? heading,
+  ) {
+    // Split on sentence-ending punctuation, keeping the punctuation
+    final parts = text.split(RegExp(r'(?<=[.!?])\s+'));
+    bool isFirst = true;
+
+    for (final part in parts) {
+      final trimmed = part.trim();
+      if (trimmed.isEmpty) continue;
+
+      final displayText = stripMarkdown(trimmed);
+
+      sentences.add(Sentence(
+        index: sentences.length,
+        rawText: trimmed,
+        displayText: displayText,
+        heading: isFirst ? heading : null,
+      ));
+      isFirst = false;
+    }
+  }
+
+  /// Strip markdown bold/italic markers for display.
+  static String stripMarkdown(String text) {
+    var result = text;
+    // Bold+italic (*** or ___)
+    result = result.replaceAllMapped(
+        RegExp(r'\*\*\*(.+?)\*\*\*'), (m) => m.group(1)!);
+    result = result.replaceAllMapped(
+        RegExp(r'___(.+?)___'), (m) => m.group(1)!);
+    // Bold (** or __)
+    result = result.replaceAllMapped(
+        RegExp(r'\*\*(.+?)\*\*'), (m) => m.group(1)!);
+    result = result.replaceAllMapped(
+        RegExp(r'__(.+?)__'), (m) => m.group(1)!);
+    // Italic (* or _)
+    result = result.replaceAllMapped(
+        RegExp(r'\*(.+?)\*'), (m) => m.group(1)!);
+    result = result.replaceAllMapped(
+        RegExp(r'_(.+?)_'), (m) => m.group(1)!);
+    return result;
   }
 }
 
@@ -48,6 +154,21 @@ class ScriptToken {
     required this.normalized,
     required this.metaphone,
     required this.charOffset,
+  });
+}
+
+/// A sentence in the script, with optional markdown heading annotation.
+class Sentence {
+  final int index;
+  final String rawText;
+  final String displayText;
+  final String? heading;
+
+  const Sentence({
+    required this.index,
+    required this.rawText,
+    required this.displayText,
+    this.heading,
   });
 }
 

@@ -23,7 +23,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   bool _isRunning = false;
   bool _initialized = false;
   String _error = '';
-  int _currentWord = 0;
+  int _currentSentence = 0;
   double _fontSize = 42;
   bool _mirrorMode = false;
   String _lastTranscript = '';
@@ -46,9 +46,9 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
 
     _sub = _speech.events.listen((event) {
       if (event.type == SpeechEventType.transcript) {
-        final pos = _matcher.match(event.text, isFinal: event.isFinal);
+        _matcher.match(event.text, isFinal: event.isFinal);
         setState(() {
-          _currentWord = pos;
+          _currentSentence = _matcher.currentSentence;
           _lastTranscript = event.text;
         });
       } else if (event.type == SpeechEventType.error) {
@@ -69,8 +69,17 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   void _resetPosition() {
     _matcher.reset();
     setState(() {
-      _currentWord = 0;
+      _currentSentence = 0;
       _lastTranscript = '';
+    });
+  }
+
+  void _skipSentence(int delta) {
+    final newIndex = (_currentSentence + delta)
+        .clamp(0, _script.sentences.length - 1);
+    _matcher.jumpToSentence(newIndex);
+    setState(() {
+      _currentSentence = newIndex;
     });
   }
 
@@ -109,9 +118,10 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
           // Script display — the core view
           ScriptDisplay(
             script: _script,
-            currentWord: _currentWord,
+            currentSentence: _currentSentence,
             fontSize: _fontSize,
             mirror: _mirrorMode,
+            onTapSkip: _skipSentence,
           ),
 
           // Debug transcript bar (top)
@@ -140,8 +150,8 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
             isRunning: _isRunning,
             fontSize: _fontSize,
             mirrorMode: _mirrorMode,
-            currentWord: _currentWord,
-            totalWords: _script.tokens.length,
+            currentSentence: _currentSentence,
+            totalSentences: _script.sentences.length,
             onToggle: _toggle,
             onReset: _resetPosition,
             onFontSizeChanged: (v) => setState(() => _fontSize = v),

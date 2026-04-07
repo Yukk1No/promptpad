@@ -1,0 +1,47 @@
+name: Build iOS (Debug)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios-debug:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.6'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build debug .app via xcodebuild
+        run: |
+          flutter build ios --debug --no-codesign --config-only
+
+          cd ios
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Debug \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath ../build/ios/Runner.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+
+      - name: Package as IPA
+        run: |
+          mkdir -p build/ios/Payload
+          cp -r build/ios/Runner.xcarchive/Products/Applications/Runner.app build/ios/Payload/
+          cd build/ios && zip -r PromptPad-debug.ipa Payload/
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptpad-debug-ipa
+          path: build/ios/PromptPad-debug.ipa

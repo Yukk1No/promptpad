@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"flutter test 2>&1\",\"timeout\":120000}",
+  "error": "Exit code 1\n00:00 +0: loading /mnt/c/Users/yuk1no/Documents/GitHub/promptpad/test/widget_test.dart\n00:00 +0: Script tokenization splits text into tokens with metaphone codes\n00:00 +1: Script tokenization handles punctuation\n00:00 +2: Script sentence parsing splits on sentence-ending punctuation\n00:00 +3: Script sentence parsing splits on double newlines\n00:00 +4: Script sentence parsing parses markdown headings as annotations\n00:00 +5: Script sentence parsing strips bold and italic markdown\n00:0...",
+  "timestamp": "2026-04-07T06:31:55.220Z",
+  "retry_count": 2
+}

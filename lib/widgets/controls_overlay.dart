@@ -6,8 +6,8 @@ class ControlsOverlay extends StatefulWidget {
   final bool isRunning;
   final double fontSize;
   final bool mirrorMode;
-  final int currentWord;
-  final int totalWords;
+  final int currentSentence;
+  final int totalSentences;
   final VoidCallback onToggle;
   final VoidCallback onReset;
   final ValueChanged<double> onFontSizeChanged;
@@ -20,8 +20,8 @@ class ControlsOverlay extends StatefulWidget {
     required this.isRunning,
     required this.fontSize,
     required this.mirrorMode,
-    required this.currentWord,
-    required this.totalWords,
+    required this.currentSentence,
+    required this.totalSentences,
     required this.onToggle,
     required this.onReset,
     required this.onFontSizeChanged,
@@ -38,8 +38,8 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = widget.totalWords > 0
-        ? widget.currentWord / widget.totalWords
+    final progress = widget.totalSentences > 0
+        ? widget.currentSentence / widget.totalSentences
         : 0.0;
 
     return GestureDetector(
@@ -137,9 +137,9 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                         tooltip: 'Mirror mode',
                       ),
 
-                      // Word count
+                      // Sentence count
                       Text(
-                        '${widget.currentWord}/${widget.totalWords}',
+                        '${widget.currentSentence + 1}/${widget.totalSentences}',
                         style: const TextStyle(
                             fontSize: 12, color: Colors.white38),
                       ),

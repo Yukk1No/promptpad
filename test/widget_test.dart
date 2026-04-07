@@ -19,6 +19,56 @@ void main() {
     });
   });
 
+  group('Script sentence parsing', () {
+    test('splits on sentence-ending punctuation', () {
+      final script = Script.fromText(
+          'Hello world. How are you? I am fine!');
+      expect(script.sentences.length, 3);
+      expect(script.sentences[0].displayText, 'Hello world.');
+      expect(script.sentences[1].displayText, 'How are you?');
+      expect(script.sentences[2].displayText, 'I am fine!');
+    });
+
+    test('splits on double newlines', () {
+      final script = Script.fromText('First paragraph\n\nSecond paragraph');
+      expect(script.sentences.length, 2);
+      expect(script.sentences[0].displayText, 'First paragraph');
+      expect(script.sentences[1].displayText, 'Second paragraph');
+    });
+
+    test('parses markdown headings as annotations', () {
+      final script = Script.fromText(
+          '## Slide 1 — Intro\nWelcome everyone.');
+      expect(script.sentences.length, 1);
+      expect(script.sentences[0].heading, 'Slide 1 — Intro');
+      expect(script.sentences[0].displayText, 'Welcome everyone.');
+    });
+
+    test('strips bold and italic markdown', () {
+      final script = Script.fromText(
+          'This is **bold** and *italic* text.');
+      expect(script.sentences[0].displayText,
+          'This is bold and italic text.');
+    });
+
+    test('strips underscore markdown', () {
+      final script = Script.fromText(
+          'This is __bold__ and _italic_ text.');
+      expect(script.sentences[0].displayText,
+          'This is bold and italic text.');
+    });
+
+    test('handles multiple sentences with heading', () {
+      final script = Script.fromText(
+          '## Section\nFirst sentence. Second sentence.');
+      expect(script.sentences.length, 2);
+      expect(script.sentences[0].heading, 'Section');
+      expect(script.sentences[0].displayText, 'First sentence.');
+      expect(script.sentences[1].heading, isNull);
+      expect(script.sentences[1].displayText, 'Second sentence.');
+    });
+  });
+
   group('Double Metaphone', () {
     test('homophones produce same code', () {
       expect(doubleMetaphone('right'), doubleMetaphone('rite'));
@@ -119,6 +169,7 @@ void main() {
       matcher.match('hello world');
       matcher.reset();
       expect(matcher.confirmedPosition, 0);
+      expect(matcher.currentSentence, 0);
     });
 
     test('repeated words do not cause backward jumps', () {
@@ -134,6 +185,53 @@ void main() {
       // Now say "the lazy" — starts from new offset, matches second "the"
       pos = matcher.match('the lazy');
       expect(pos, greaterThanOrEqualTo(pos)); // never goes backward
+    });
+  });
+
+  group('ScriptMatcher - sentence tracking', () {
+    late ScriptMatcher matcher;
+
+    setUp(() {
+      matcher = ScriptMatcher();
+    });
+
+    test('starts at sentence 0', () {
+      final script = Script.fromText(
+          'First sentence. Second sentence. Third sentence.');
+      matcher.loadScript(script);
+      expect(matcher.currentSentence, 0);
+      expect(matcher.totalSentences, 3);
+    });
+
+    test('jumpToSentence changes current sentence', () {
+      final script = Script.fromText(
+          'First sentence. Second sentence. Third sentence.');
+      matcher.loadScript(script);
+
+      matcher.jumpToSentence(2);
+      expect(matcher.currentSentence, 2);
+    });
+
+    test('jumpToSentence clamps to valid range', () {
+      final script = Script.fromText(
+          'First sentence. Second sentence.');
+      matcher.loadScript(script);
+
+      matcher.jumpToSentence(10);
+      expect(matcher.currentSentence, 1);
+
+      matcher.jumpToSentence(-5);
+      expect(matcher.currentSentence, 0);
+    });
+
+    test('reset returns sentence to 0', () {
+      final script = Script.fromText(
+          'First sentence. Second sentence.');
+      matcher.loadScript(script);
+
+      matcher.jumpToSentence(1);
+      matcher.reset();
+      expect(matcher.currentSentence, 0);
     });
   });
 }
