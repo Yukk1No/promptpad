@@ -222,7 +222,6 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
               currentSentence: _currentSentence,
               fontSize: _fontSize,
               mirror: _mirrorMode,
-              onSkip: _skipSentence,
             ),
 
             // Transcript bar — last ~50 chars, right-aligned with left ellipsis
@@ -263,6 +262,38 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
               onMirrorChanged: (v) => setState(() => _mirrorMode = v),
               onExit: () => Navigator.pop(context),
             ),
+
+            // Skip buttons — above everything so they're always tappable
+            if (_script.sentences.length > 1)
+              Positioned(
+                top: 8,
+                left: 8,
+                child: Opacity(
+                  opacity: 0.5,
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_left, size: 28, color: Colors.white),
+                    onPressed: () => _skipSentence(-1),
+                    tooltip: 'Previous sentence',
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ),
+            if (_script.sentences.length > 1)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Opacity(
+                  opacity: 0.5,
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_right, size: 28, color: Colors.white),
+                    onPressed: () => _skipSentence(1),
+                    tooltip: 'Next sentence',
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

@@ -10,8 +10,6 @@ class ScriptDisplay extends StatefulWidget {
   final int currentSentence;
   final double fontSize;
   final bool mirror;
-  final ValueChanged<int>? onSkip;
-
   const ScriptDisplay({
     super.key,
     required this.script,
@@ -19,7 +17,6 @@ class ScriptDisplay extends StatefulWidget {
     required this.currentSentence,
     required this.fontSize,
     this.mirror = false,
-    this.onSkip,
   });
 
   @override
@@ -193,8 +190,6 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
       sentenceStartWord.putIfAbsent(entry.value, () => entry.key);
     }
 
-    final hasSkip = widget.onSkip != null && sentences.isNotEmpty;
-
     final child = Stack(
         children: [
           SingleChildScrollView(
@@ -225,50 +220,6 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
               ),
             ),
           ),
-
-          // Skip previous button — top-left corner
-          if (hasSkip)
-            Positioned(
-              top: 8,
-              left: 8,
-              child: Opacity(
-                opacity: 0.4,
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: IconButton(
-                    icon: const Icon(Icons.chevron_left, size: 20),
-                    onPressed: () => widget.onSkip!(-1),
-                    tooltip: 'Previous sentence',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-
-          // Skip next button — top-right corner
-          if (hasSkip)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Opacity(
-                opacity: 0.4,
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: IconButton(
-                    icon: const Icon(Icons.chevron_right, size: 20),
-                    onPressed: () => widget.onSkip!(1),
-                    tooltip: 'Next sentence',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
         ],
     );
 

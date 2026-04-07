@@ -425,6 +425,12 @@ class ScriptMatcher {
     if (a.isEmpty || b.isEmpty) return false;
     if (a == b) return true;
 
+    // Phonetic match via Double Metaphone — handles accents/homophones
+    // "four"/"for", "right"/"rite", accented pronunciations
+    final metaA = doubleMetaphone(a);
+    final metaB = doubleMetaphone(b);
+    if (metaA.isNotEmpty && metaB.isNotEmpty && metaA == metaB) return true;
+
     // Prefix match — only if prefix covers >= 50% of the longer word
     final longer = max(a.length, b.length);
     if (a.startsWith(b) && b.length * 2 >= longer) return true;
