@@ -1,138 +1,95 @@
 import 'dart:math';
 import '../models/script.dart';
 
-/// Tracks the speaker's position in the script using speech recognition results.
+/// Direct port of textream's SpeechRecognizer matching algorithm.
 ///
-/// Inspired by textream's dual-strategy approach:
-/// - Sequential forward-only matching (never jumps backward)
-/// - Word-level fuzzy match with skip tolerance
-/// - Character-level walk with re-sync
-/// - Best of both strategies wins
+/// Tracks position by character count in a collapsed source string.
+/// Dual strategy: charLevelMatch + wordLevelMatch, best (max) wins.
+/// Only moves forward (recognizedCharCount never decreases).
 class ScriptMatcher {
   Script? _script;
-  int _confirmedPos = 0;
-  String _normalizedSource = '';
-  int _charOffset = 0;
 
-  int get confirmedPosition => _confirmedPos;
+  /// The collapsed source text (all words joined by single space).
+  String _sourceText = '';
+
+  /// Lowercased, letters/numbers/whitespace only.
+  String _normalizedSource = '';
+
+  /// Source words split from the remaining suffix.
+  List<String> _sourceWords = [];
+
+  /// Character offset where matching begins (advances on each session/resume).
+  int _matchStartOffset = 0;
+
+  /// Total recognized characters so far (monotonically increasing).
+  int _recognizedCharCount = 0;
+
+  int get confirmedPosition => _charCountToWordIndex(_recognizedCharCount);
 
   void loadScript(Script script) {
     _script = script;
-    _confirmedPos = 0;
-    _charOffset = 0;
-    _normalizedSource =
-        script.tokens.map((t) => t.normalized).join(' ');
+    _sourceText = script.tokens.map((t) => t.raw).join(' ');
+    _normalizedSource = _normalize(_sourceText);
+    _sourceWords = _sourceText.split(RegExp(r'\s+'));
+    _matchStartOffset = 0;
+    _recognizedCharCount = 0;
   }
 
   void reset() {
-    _confirmedPos = 0;
-    _charOffset = 0;
+    _matchStartOffset = 0;
+    _recognizedCharCount = 0;
   }
 
   void jumpTo(int wordIndex) {
     final script = _script;
     if (script == null) return;
-    _confirmedPos = wordIndex.clamp(0, script.tokens.length - 1);
-    _recalcCharOffset();
+    final clamped = wordIndex.clamp(0, script.tokens.length - 1);
+    // Convert word index to char offset
+    var charPos = 0;
+    for (var i = 0; i < clamped; i++) {
+      charPos += script.tokens[i].raw.length + 1;
+    }
+    _recognizedCharCount = charPos;
+    _matchStartOffset = charPos;
   }
 
-  /// Process a transcript and return the new confirmed word position.
-  /// Only moves forward, never backward.
-  int match(String transcript) {
-    final script = _script;
-    if (script == null || script.tokens.isEmpty) return 0;
+  /// Process a spoken transcript. Returns the current word index.
+  int match(String spoken) {
+    if (_script == null || _sourceText.isEmpty) return 0;
 
-    final wordResult = _wordLevelMatch(transcript);
-    final charResult = _charLevelMatch(transcript);
-    final best = max(wordResult, charResult);
+    final charResult = _charLevelMatch(spoken);
+    final wordResult = _wordLevelMatch(spoken);
+    final best = max(charResult, wordResult);
+    final newCount = _matchStartOffset + best;
 
-    if (best > _confirmedPos) {
-      _confirmedPos = min(best, script.tokens.length - 1);
-      _recalcCharOffset();
+    if (newCount > _recognizedCharCount) {
+      _recognizedCharCount = min(newCount, _sourceText.length);
     }
 
-    return _confirmedPos;
+    // Advance matchStartOffset for next call
+    _matchStartOffset = _recognizedCharCount;
+
+    return confirmedPosition;
   }
 
-  /// Word-level sequential match from current position.
-  /// Walks source and spoken words forward with skip tolerance.
-  int _wordLevelMatch(String transcript) {
-    final script = _script!;
-    final spokenWords = _normalizeWords(transcript);
-    if (spokenWords.isEmpty) return _confirmedPos;
+  /// Character-level fuzzy match on the remaining source suffix.
+  /// Returns number of characters matched from matchStartOffset.
+  int _charLevelMatch(String spoken) {
+    if (_matchStartOffset >= _normalizedSource.length) return 0;
 
-    var si = _confirmedPos; // source index
-    var ri = 0; // spoken (recognition) index
-    var lastMatched = _confirmedPos;
+    final remainingSource = _normalizedSource.substring(_matchStartOffset);
+    final normalizedSpoken = _normalize(spoken);
+    if (normalizedSpoken.isEmpty) return 0;
 
-    while (si < script.tokens.length && ri < spokenWords.length) {
-      final srcWord = script.tokens[si].normalized;
-      final spkWord = spokenWords[ri];
+    var si = 0; // source index
+    var ri = 0; // recognition (spoken) index
+    var lastGoodOrigIndex = 0;
 
-      if (srcWord.isEmpty) {
-        si++;
-        continue;
-      }
+    while (si < remainingSource.length && ri < normalizedSpoken.length) {
+      final sc = remainingSource[si];
+      final rc = normalizedSpoken[ri];
 
-      if (_isFuzzyMatch(srcWord, spkWord)) {
-        // Match found — advance both
-        lastMatched = si;
-        si++;
-        ri++;
-        continue;
-      }
-
-      // Try skipping up to 3 spoken words (ASR hallucinated extra words)
-      var found = false;
-      for (var skip = 1; skip <= 3 && ri + skip < spokenWords.length; skip++) {
-        if (_isFuzzyMatch(srcWord, spokenWords[ri + skip])) {
-          ri += skip + 1;
-          lastMatched = si;
-          si++;
-          found = true;
-          break;
-        }
-      }
-      if (found) continue;
-
-      // Try skipping up to 3 source words (user skipped or ASR missed)
-      for (var skip = 1;
-          skip <= 3 && si + skip < script.tokens.length;
-          skip++) {
-        if (_isFuzzyMatch(script.tokens[si + skip].normalized, spkWord)) {
-          lastMatched = si + skip;
-          si = si + skip + 1;
-          ri++;
-          found = true;
-          break;
-        }
-      }
-      if (found) continue;
-
-      // No match — advance spoken pointer only (don't advance source)
-      ri++;
-    }
-
-    return lastMatched;
-  }
-
-  /// Character-level walk with re-sync, operating on normalized text
-  /// from the current position forward.
-  int _charLevelMatch(String transcript) {
-    if (_charOffset >= _normalizedSource.length) return _confirmedPos;
-
-    final spoken = _normalize(transcript);
-    if (spoken.isEmpty) return _confirmedPos;
-
-    var si = _charOffset; // source char index
-    var ri = 0; // spoken char index
-    var lastGoodSi = _charOffset;
-
-    while (si < _normalizedSource.length && ri < spoken.length) {
-      final sc = _normalizedSource[si];
-      final rc = spoken[ri];
-
-      // Skip whitespace/non-alnum in both
+      // Skip non-alnum in both
       if (!_isAlnum(sc)) {
         si++;
         continue;
@@ -143,7 +100,7 @@ class ScriptMatcher {
       }
 
       if (sc == rc) {
-        lastGoodSi = si;
+        lastGoodOrigIndex = si;
         si++;
         ri++;
         continue;
@@ -152,9 +109,10 @@ class ScriptMatcher {
       // Mismatch — try re-sync
       var synced = false;
 
-      // Skip up to 3 in spoken (ASR inserted extra chars)
-      for (var k = 1; k <= 3 && ri + k < spoken.length; k++) {
-        if (_isAlnum(spoken[ri + k]) && spoken[ri + k] == sc) {
+      // Skip up to 3 in spoken (ASR inserted extra)
+      for (var k = 1; k <= 3 && ri + k < normalizedSpoken.length; k++) {
+        if (_isAlnum(normalizedSpoken[ri + k]) &&
+            normalizedSpoken[ri + k] == sc) {
           ri += k;
           synced = true;
           break;
@@ -162,10 +120,10 @@ class ScriptMatcher {
       }
       if (synced) continue;
 
-      // Skip up to 3 in source (ASR missed chars)
-      for (var k = 1; k <= 3 && si + k < _normalizedSource.length; k++) {
-        if (_isAlnum(_normalizedSource[si + k]) &&
-            _normalizedSource[si + k] == rc) {
+      // Skip up to 3 in source (ASR missed)
+      for (var k = 1; k <= 3 && si + k < remainingSource.length; k++) {
+        if (_isAlnum(remainingSource[si + k]) &&
+            remainingSource[si + k] == rc) {
           si += k;
           synced = true;
           break;
@@ -173,28 +131,107 @@ class ScriptMatcher {
       }
       if (synced) continue;
 
-      // Neither worked — advance both (substitution)
-      lastGoodSi = si;
+      // Neither — treat as substitution, record progress
+      lastGoodOrigIndex = si;
       si++;
       ri++;
     }
 
-    // Convert char position back to word index
-    return _charPosToWordIndex(lastGoodSi);
+    return lastGoodOrigIndex;
   }
 
-  /// Fuzzy word match — prefix, containment, shared prefix, edit distance.
+  /// Word-level match on the remaining source suffix.
+  /// Returns number of characters matched from matchStartOffset.
+  int _wordLevelMatch(String spoken) {
+    if (_matchStartOffset >= _sourceText.length) return 0;
+
+    final remaining = _sourceText.substring(_matchStartOffset);
+    final srcWords = remaining.split(RegExp(r'\s+'));
+    final spkWords = spoken
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+
+    if (srcWords.isEmpty || spkWords.isEmpty) return 0;
+
+    var si = 0; // source word index
+    var ri = 0; // spoken word index
+    var matchedCharCount = 0;
+
+    while (si < srcWords.length && ri < spkWords.length) {
+      final srcWord =
+          srcWords[si].toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final spkWord =
+          spkWords[ri].replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+      // Skip empty source words (punctuation only)
+      if (srcWord.isEmpty) {
+        matchedCharCount += srcWords[si].length + 1; // +1 for space
+        si++;
+        continue;
+      }
+
+      if (_isFuzzyMatch(srcWord, spkWord)) {
+        matchedCharCount += srcWords[si].length + 1;
+        si++;
+        ri++;
+        continue;
+      }
+
+      // Try skipping up to 3 spoken words (ASR hallucinated)
+      var found = false;
+      for (var skip = 1; skip <= 3 && ri + skip < spkWords.length; skip++) {
+        final ahead =
+            spkWords[ri + skip].replaceAll(RegExp(r'[^a-z0-9]'), '');
+        if (_isFuzzyMatch(srcWord, ahead)) {
+          ri += skip + 1;
+          matchedCharCount += srcWords[si].length + 1;
+          si++;
+          found = true;
+          break;
+        }
+      }
+      if (found) continue;
+
+      // Try skipping up to 3 source words (user skipped ahead)
+      for (var skip = 1; skip <= 3 && si + skip < srcWords.length; skip++) {
+        final aheadSrc = srcWords[si + skip]
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]'), '');
+        if (_isFuzzyMatch(aheadSrc, spkWord)) {
+          // Accumulate skipped source words
+          for (var k = 0; k <= skip; k++) {
+            matchedCharCount += srcWords[si + k].length + 1;
+          }
+          si += skip + 1;
+          ri++;
+          found = true;
+          break;
+        }
+      }
+      if (found) continue;
+
+      // No match — advance spoken only
+      ri++;
+    }
+
+    // Remove trailing +1 space if we matched anything
+    if (matchedCharCount > 0) matchedCharCount--;
+
+    return matchedCharCount;
+  }
+
+  /// Textream's isFuzzyMatch — prefix, containment, shared prefix, edit distance.
   bool _isFuzzyMatch(String a, String b) {
     if (a.isEmpty || b.isEmpty) return false;
     if (a == b) return true;
 
-    // Prefix match (handles "not" ~ "notch", partial ASR results)
+    // Prefix match
     if (a.startsWith(b) || b.startsWith(a)) return true;
 
     // Substring containment
-    if (a.length >= 3 && b.length >= 3) {
-      if (a.contains(b) || b.contains(a)) return true;
-    }
+    if (a.contains(b) || b.contains(a)) return true;
 
     // Shared prefix >= 60% of shorter word
     final shorter = min(a.length, b.length);
@@ -210,14 +247,13 @@ class ScriptMatcher {
       if (shared >= max(2, (shorter * 3) ~/ 5)) return true;
     }
 
-    // Edit distance tolerance
+    // Edit distance tolerance (tiered by word length)
     final dist = _editDistance(a, b);
-    if (shorter <= 4) return dist <= 1; // short words: 1 edit
-    if (shorter <= 8) return dist <= 2; // medium: 2 edits
-    return dist <= max(a.length, b.length) ~/ 3; // long: up to 1/3
+    if (shorter <= 4) return dist <= 1;
+    if (shorter <= 8) return dist <= 2;
+    return dist <= max(a.length, b.length) ~/ 3;
   }
 
-  /// Standard Levenshtein edit distance.
   int _editDistance(String a, String b) {
     final n = a.length, m = b.length;
     if (n == 0) return m;
@@ -239,44 +275,29 @@ class ScriptMatcher {
     return prev[m];
   }
 
-  /// Convert a character position in normalizedSource to a word index.
-  int _charPosToWordIndex(int charPos) {
-    final script = _script!;
+  /// Convert character count to word index.
+  int _charCountToWordIndex(int charCount) {
+    final script = _script;
+    if (script == null || script.tokens.isEmpty) return 0;
+    if (charCount <= 0) return 0;
+
     var offset = 0;
-    for (var i = 0; i < script.tokens.length; i++) {
-      final wordLen = script.tokens[i].normalized.length;
-      if (offset + wordLen > charPos) return i;
-      offset += wordLen + 1; // +1 for space
+    for (var i = 0; i < _sourceWords.length; i++) {
+      offset += _sourceWords[i].length;
+      if (offset >= charCount) return min(i, script.tokens.length - 1);
+      offset += 1; // space
     }
     return script.tokens.length - 1;
   }
 
-  /// Recalculate _charOffset from _confirmedPos.
-  void _recalcCharOffset() {
-    final script = _script!;
-    var offset = 0;
-    for (var i = 0; i < _confirmedPos && i < script.tokens.length; i++) {
-      offset += script.tokens[i].normalized.length + 1;
-    }
-    _charOffset = offset;
-  }
-
-  List<String> _normalizeWords(String text) {
-    return text
-        .split(RegExp(r'\s+'))
-        .where((w) => w.isNotEmpty)
-        .map((w) => w.toLowerCase().replaceAll(RegExp(r"[^\w']"), ''))
-        .where((w) => w.isNotEmpty)
-        .toList();
-  }
-
   String _normalize(String text) {
-    return text.toLowerCase().replaceAll(RegExp(r'[^a-z0-9 ]'), '');
+    return text
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9 ]'), '');
   }
 
   bool _isAlnum(String c) {
     final code = c.codeUnitAt(0);
-    return (code >= 48 && code <= 57) || // 0-9
-        (code >= 97 && code <= 122); // a-z
+    return (code >= 48 && code <= 57) || (code >= 97 && code <= 122);
   }
 }
