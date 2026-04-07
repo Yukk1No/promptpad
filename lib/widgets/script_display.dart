@@ -2,22 +2,25 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/script.dart';
 
-/// Displays the script with sentence-level highlighting and auto-scroll.
-/// Includes a horizontal reference line at 1/3 from the top of the screen.
+/// Displays the script with word-level highlighting and auto-scroll.
+/// Includes a reference line at 1/3 from top.
+/// Swipe up/down to skip sentences.
 class ScriptDisplay extends StatefulWidget {
   final Script script;
+  final int currentWord;
   final int currentSentence;
   final double fontSize;
   final bool mirror;
-  final ValueChanged<int>? onTapSkip;
+  final ValueChanged<int>? onSwipeSkip;
 
   const ScriptDisplay({
     super.key,
     required this.script,
+    required this.currentWord,
     required this.currentSentence,
     required this.fontSize,
     this.mirror = false,
-    this.onTapSkip,
+    this.onSwipeSkip,
   });
 
   @override
@@ -26,7 +29,7 @@ class ScriptDisplay extends StatefulWidget {
 
 class _ScriptDisplayState extends State<ScriptDisplay> {
   final ScrollController _scrollController = ScrollController();
-  final Map<int, GlobalKey> _sentenceKeys = {};
+  final Map<int, GlobalKey> _wordKeys = {};
 
   @override
   void initState() {
@@ -37,23 +40,23 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
   @override
   void didUpdateWidget(ScriptDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentSentence != widget.currentSentence) {
-      _scrollToCurrentSentence();
+    if (oldWidget.currentWord != widget.currentWord) {
+      _scrollToCurrentWord();
     }
     if (oldWidget.script != widget.script) {
-      _sentenceKeys.clear();
+      _wordKeys.clear();
       _ensureKeys();
     }
   }
 
   void _ensureKeys() {
-    for (var i = 0; i < widget.script.sentences.length; i++) {
-      _sentenceKeys.putIfAbsent(i, () => GlobalKey());
+    for (var i = 0; i < widget.script.tokens.length; i++) {
+      _wordKeys.putIfAbsent(i, () => GlobalKey());
     }
   }
 
-  void _scrollToCurrentSentence() {
-    final key = _sentenceKeys[widget.currentSentence];
+  void _scrollToCurrentWord() {
+    final key = _wordKeys[widget.currentWord];
     if (key == null) return;
 
     final ctx = key.currentContext;
@@ -66,7 +69,6 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
     final localOffset = box.localToGlobal(Offset.zero);
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Target: keep current sentence at 1/3 from top
     final targetY = screenHeight / 3;
     final diff = localOffset.dy - targetY;
     final newOffset = (_scrollController.offset + diff)
@@ -79,105 +81,139 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
     );
   }
 
-  void _handleTap(TapUpDetails details) {
-    if (widget.onTapSkip == null) return;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final tapY = details.globalPosition.dy;
-
-    if (tapY < screenHeight / 2) {
-      // Upper half: advance to next sentence
-      widget.onTapSkip!(1);
-    } else {
-      // Lower half: go back to previous sentence
-      widget.onTapSkip!(-1);
-    }
-  }
-
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
   }
 
+  /// Build a sentence heading label widget.
+  Widget _buildHeading(String heading, double fontSize) {
+    return Padding(
+      padding: EdgeInsets.only(top: fontSize * 0.4, bottom: 4),
+      child: Text(
+        heading,
+        style: TextStyle(
+          fontSize: fontSize * 0.35,
+          color: Colors.white24,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tokens = widget.script.tokens;
     final sentences = widget.script.sentences;
     final screenHeight = MediaQuery.of(context).size.height;
 
+    // Build a map: wordIndex -> sentenceIndex for coloring
+    // and track which sentence each word belongs to
+    final wordToSentence = <int, int>{};
+    var wordIdx = 0;
+    for (var si = 0; si < sentences.length; si++) {
+      final sentenceWords = sentences[si].rawText.split(RegExp(r'\s+'));
+      for (final _ in sentenceWords) {
+        if (wordIdx < tokens.length) {
+          wordToSentence[wordIdx] = si;
+          wordIdx++;
+        }
+      }
+    }
+
+    // Build heading insertion points: sentenceIndex -> heading text
+    final headingBefore = <int, String>{};
+    for (final s in sentences) {
+      if (s.heading != null) {
+        headingBefore[s.index] = s.heading!;
+      }
+    }
+
+    // Find first word index of each sentence
+    final sentenceStartWord = <int, int>{};
+    for (final entry in wordToSentence.entries) {
+      sentenceStartWord.putIfAbsent(entry.value, () => entry.key);
+    }
+
     final child = GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onTapUp: _handleTap,
+      onVerticalDragEnd: (details) {
+        if (widget.onSwipeSkip == null) return;
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity < -200) {
+          widget.onSwipeSkip!(1); // swipe up = next
+        } else if (velocity > 200) {
+          widget.onSwipeSkip!(-1); // swipe down = previous
+        }
+      },
       child: Stack(
         children: [
-          // Scrollable sentence list
           SingleChildScrollView(
             controller: _scrollController,
             padding: EdgeInsets.symmetric(
               horizontal: 32,
               vertical: screenHeight * 0.4,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(sentences.length, (i) {
-                final sentence = sentences[i];
-                final isCurrent = i == widget.currentSentence;
-                final isPast = i < widget.currentSentence;
+            child: Wrap(
+              spacing: 8,
+              runSpacing: widget.fontSize * 0.4,
+              children: List.generate(tokens.length, (i) {
+                final token = tokens[i];
+                final isCurrent = i == widget.currentWord;
+                final isPast = i < widget.currentWord;
 
-                // Opacity: current = 1.0, past = 0.3, future fades gently
                 final opacity = isCurrent
                     ? 1.0
                     : isPast
                         ? 0.3
-                        : max(0.5, 1.0 - (i - widget.currentSentence) * 0.05);
+                        : max(0.5, 1.0 - (i - widget.currentWord) * 0.01);
 
-                return AnimatedOpacity(
-                  key: _sentenceKeys[i],
+                // Check if we need a heading before this word
+                final sentenceIdx = wordToSentence[i];
+                final isFirstWordOfSentence =
+                    sentenceIdx != null && sentenceStartWord[sentenceIdx] == i;
+                final heading = isFirstWordOfSentence
+                    ? headingBefore[sentenceIdx]
+                    : null;
+
+                final wordWidget = AnimatedOpacity(
+                  key: _wordKeys[i],
                   opacity: opacity,
                   duration: const Duration(milliseconds: 200),
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: widget.fontSize * 0.6,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Markdown heading annotation
-                        if (sentence.heading != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              sentence.heading!,
-                              style: TextStyle(
-                                fontSize: widget.fontSize * 0.35,
-                                color: Colors.white24,
-                                fontWeight: FontWeight.w500,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        // Sentence text
-                        if (sentence.displayText.isNotEmpty)
-                          Text(
-                            sentence.displayText,
-                            style: TextStyle(
-                              fontSize: widget.fontSize,
-                              fontWeight:
-                                  isCurrent ? FontWeight.bold : FontWeight.w300,
-                              color: isCurrent
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.white,
-                              height: 1.5,
-                            ),
-                          ),
-                      ],
+                  child: Text(
+                    token.raw,
+                    style: TextStyle(
+                      fontSize: widget.fontSize,
+                      fontWeight:
+                          isCurrent ? FontWeight.bold : FontWeight.w300,
+                      color: isCurrent
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.white,
+                      height: 1.5,
                     ),
                   ),
                 );
+
+                if (heading != null) {
+                  // Force a full-width line break before the heading
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(width: double.infinity),
+                      _buildHeading(heading, widget.fontSize),
+                      wordWidget,
+                    ],
+                  );
+                }
+
+                return wordWidget;
               }),
             ),
           ),
 
-          // Reference/guide line at 1/3 from top
+          // Reference line at 1/3 from top
           Positioned(
             top: screenHeight / 3,
             left: 0,

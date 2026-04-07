@@ -29,9 +29,9 @@ But, in a larger sense, we can not dedicate — we can not consecrate — we can
 
   Future<void> _loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    final historyJson = prefs.getStringList(_historyKey) ?? [];
+    final history = prefs.getStringList(_historyKey) ?? [];
     setState(() {
-      _scriptHistory = historyJson;
+      _scriptHistory = history;
       if (_scriptHistory.isNotEmpty) {
         _controller.text = _scriptHistory.first;
       }
@@ -39,7 +39,6 @@ But, in a larger sense, we can not dedicate — we can not consecrate — we can
   }
 
   Future<void> _saveToHistory(String text) async {
-    // Remove duplicate if exists, then prepend
     _scriptHistory.remove(text);
     _scriptHistory.insert(0, text);
     if (_scriptHistory.length > _maxHistory) {
@@ -92,36 +91,31 @@ But, in a larger sense, we can not dedicate — we can not consecrate — we can
                 ),
               ),
               const Divider(height: 1, color: Colors.white12),
-              ...List.generate(
-                _scriptHistory.length,
-                (i) {
-                  final script = _scriptHistory[i];
-                  final preview = script.length > 80
-                      ? '${script.substring(0, 80)}...'
-                      : script;
-                  return ListTile(
-                    leading: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Colors.white12,
-                      child: Text(
-                        '${i + 1}',
+              ...List.generate(_scriptHistory.length, (i) {
+                final script = _scriptHistory[i];
+                final preview = script.length > 80
+                    ? '${script.substring(0, 80)}...'
+                    : script;
+                return ListTile(
+                  leading: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: Colors.white12,
+                    child: Text('${i + 1}',
                         style: const TextStyle(
-                            fontSize: 12, color: Colors.white54),
-                      ),
-                    ),
-                    title: Text(
-                      preview.replaceAll('\n', ' '),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    onTap: () {
-                      _controller.text = script;
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
+                            fontSize: 12, color: Colors.white54)),
+                  ),
+                  title: Text(
+                    preview.replaceAll('\n', ' '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  onTap: () {
+                    _controller.text = script;
+                    Navigator.pop(context);
+                  },
+                );
+              }),
               const SizedBox(height: 8),
             ],
           ),
@@ -136,27 +130,55 @@ But, in a larger sense, we can not dedicate — we can not consecrate — we can
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'PromptPad',
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'PromptPad',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Paste your script, then speak naturally.',
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white54,
+                                    ),
+                          ),
+                        ],
                       ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Paste your script, then speak naturally.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    ),
+                    if (_scriptHistory.isNotEmpty)
+                      IconButton(
+                        onPressed: _showHistory,
+                        icon: const Icon(Icons.history_rounded),
+                        tooltip: 'Recent scripts',
                         color: Colors.white54,
                       ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                Expanded(
+              ),
+
+              const SizedBox(height: 16),
+
+              // Script input area
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: TextField(
                     controller: _controller,
                     maxLines: null,
@@ -176,34 +198,28 @@ But, in a larger sense, we can not dedicate — we can not consecrate — we can
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
+              ),
+
+              // Bottom action bar
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
                   children: [
                     OutlinedButton(
-                      onPressed: () {
-                        _controller.text = _sampleScript;
-                      },
+                      onPressed: () => _controller.text = _sampleScript,
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 16),
+                            horizontal: 20, vertical: 16),
                         side: BorderSide(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withAlpha(128)),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withAlpha(128),
+                        ),
                       ),
-                      child: const Text('Load Sample'),
+                      child: const Text('Sample'),
                     ),
-                    const SizedBox(width: 8),
-                    // History button
-                    IconButton(
-                      onPressed:
-                          _scriptHistory.isNotEmpty ? _showHistory : null,
-                      icon: const Icon(Icons.history_rounded),
-                      tooltip: 'Recent scripts',
-                      color: Colors.white54,
-                    ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton.icon(
                         onPressed: _startPrompter,
@@ -218,8 +234,8 @@ But, in a larger sense, we can not dedicate — we can not consecrate — we can
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
-/// Bottom overlay with play/pause, font size, mirror toggle, and progress.
+/// Bottom overlay with play/pause, skip, font size, mirror toggle, and progress.
 class ControlsOverlay extends StatefulWidget {
   final bool initialized;
   final bool isRunning;
   final double fontSize;
   final bool mirrorMode;
+  final int currentWord;
+  final int totalWords;
   final int currentSentence;
   final int totalSentences;
   final VoidCallback onToggle;
   final VoidCallback onReset;
+  final ValueChanged<int> onSkip;
   final ValueChanged<double> onFontSizeChanged;
   final ValueChanged<bool> onMirrorChanged;
   final VoidCallback onExit;
@@ -20,10 +23,13 @@ class ControlsOverlay extends StatefulWidget {
     required this.isRunning,
     required this.fontSize,
     required this.mirrorMode,
+    required this.currentWord,
+    required this.totalWords,
     required this.currentSentence,
     required this.totalSentences,
     required this.onToggle,
     required this.onReset,
+    required this.onSkip,
     required this.onFontSizeChanged,
     required this.onMirrorChanged,
     required this.onExit,
@@ -38,8 +44,8 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = widget.totalSentences > 0
-        ? widget.currentSentence / widget.totalSentences
+    final progress = widget.totalWords > 0
+        ? widget.currentWord / widget.totalWords
         : 0.0;
 
     return GestureDetector(
@@ -71,7 +77,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
               child: SafeArea(
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.black87,
                     borderRadius: BorderRadius.circular(16),
@@ -80,42 +86,65 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                     children: [
                       // Exit
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded),
+                        icon: const Icon(Icons.arrow_back_rounded, size: 20),
                         onPressed: widget.onExit,
                         tooltip: 'Exit',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
                       ),
 
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
 
                       // Play / Pause
                       FilledButton.icon(
                         onPressed: widget.initialized ? widget.onToggle : null,
                         icon: Icon(widget.isRunning
                             ? Icons.pause_rounded
-                            : Icons.mic_rounded),
+                            : Icons.mic_rounded,
+                            size: 18),
                         label: Text(widget.isRunning ? 'Pause' : 'Start'),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
+                              horizontal: 16, vertical: 10),
                         ),
                       ),
 
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
+
+                      // Skip prev
+                      IconButton(
+                        icon: const Icon(Icons.skip_previous_rounded, size: 20),
+                        onPressed: () => widget.onSkip(-1),
+                        tooltip: 'Previous sentence',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
+                      ),
+
+                      // Skip next
+                      IconButton(
+                        icon: const Icon(Icons.skip_next_rounded, size: 20),
+                        onPressed: () => widget.onSkip(1),
+                        tooltip: 'Next sentence',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
+                      ),
 
                       // Reset
                       IconButton(
-                        icon: const Icon(Icons.replay_rounded),
+                        icon: const Icon(Icons.replay_rounded, size: 20),
                         onPressed: widget.onReset,
-                        tooltip: 'Reset to start',
+                        tooltip: 'Reset',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
                       ),
 
                       const Spacer(),
 
                       // Font size
-                      const Icon(Icons.text_fields, size: 18,
+                      const Icon(Icons.text_fields, size: 16,
                           color: Colors.white54),
                       SizedBox(
-                        width: 120,
+                        width: 100,
                         child: Slider(
                           value: widget.fontSize,
                           min: 24,
@@ -128,6 +157,7 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       IconButton(
                         icon: Icon(
                           Icons.flip_rounded,
+                          size: 20,
                           color: widget.mirrorMode
                               ? Theme.of(context).colorScheme.primary
                               : Colors.white54,
@@ -135,13 +165,17 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                         onPressed: () =>
                             widget.onMirrorChanged(!widget.mirrorMode),
                         tooltip: 'Mirror mode',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
                       ),
 
-                      // Sentence count
+                      const SizedBox(width: 4),
+
+                      // Sentence counter
                       Text(
                         '${widget.currentSentence + 1}/${widget.totalSentences}',
                         style: const TextStyle(
-                            fontSize: 12, color: Colors.white38),
+                            fontSize: 11, color: Colors.white38),
                       ),
                     ],
                   ),

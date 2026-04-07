@@ -23,6 +23,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   bool _isRunning = false;
   bool _initialized = false;
   String _error = '';
+  int _currentWord = 0;
   int _currentSentence = 0;
   double _fontSize = 42;
   bool _mirrorMode = false;
@@ -46,8 +47,9 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
 
     _sub = _speech.events.listen((event) {
       if (event.type == SpeechEventType.transcript) {
-        _matcher.match(event.text, isFinal: event.isFinal);
+        final pos = _matcher.match(event.text, isFinal: event.isFinal);
         setState(() {
+          _currentWord = pos;
           _currentSentence = _matcher.currentSentence;
           _lastTranscript = event.text;
         });
@@ -69,6 +71,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   void _resetPosition() {
     _matcher.reset();
     setState(() {
+      _currentWord = 0;
       _currentSentence = 0;
       _lastTranscript = '';
     });
@@ -80,6 +83,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     _matcher.jumpToSentence(newIndex);
     setState(() {
       _currentSentence = newIndex;
+      _currentWord = _matcher.confirmedPosition;
     });
   }
 
@@ -115,16 +119,15 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Script display — the core view
           ScriptDisplay(
             script: _script,
+            currentWord: _currentWord,
             currentSentence: _currentSentence,
             fontSize: _fontSize,
             mirror: _mirrorMode,
-            onTapSkip: _skipSentence,
+            onSwipeSkip: _skipSentence,
           ),
 
-          // Debug transcript bar (top)
           if (_lastTranscript.isNotEmpty)
             Positioned(
               top: 0,
@@ -136,24 +139,25 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
                   _lastTranscript,
-                  style: const TextStyle(
-                      fontSize: 12, color: Colors.white38),
+                  style: const TextStyle(fontSize: 12, color: Colors.white38),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
 
-          // Controls overlay (bottom)
           ControlsOverlay(
             initialized: _initialized,
             isRunning: _isRunning,
             fontSize: _fontSize,
             mirrorMode: _mirrorMode,
+            currentWord: _currentWord,
+            totalWords: _script.tokens.length,
             currentSentence: _currentSentence,
             totalSentences: _script.sentences.length,
             onToggle: _toggle,
             onReset: _resetPosition,
+            onSkip: _skipSentence,
             onFontSizeChanged: (v) => setState(() => _fontSize = v),
             onMirrorChanged: (v) => setState(() => _mirrorMode = v),
             onExit: () => Navigator.pop(context),
