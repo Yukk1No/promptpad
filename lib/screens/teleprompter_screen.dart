@@ -41,14 +41,16 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     super.initState();
     _script = Script.fromText(widget.scriptText);
     _matcher.loadScript(_script);
-    _loadSettings();
-    _initSpeech();
+    _initAll();
   }
 
-  Future<void> _loadSettings() async {
+  Future<void> _initAll() async {
+    // Load settings FIRST, then init speech with correct locale
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     _locale = prefs.getString('speech_locale') ?? 'en-US';
     _onDevice = prefs.getBool('on_device') ?? true;
+    await _initSpeech();
   }
 
   Future<void> _initSpeech() async {
