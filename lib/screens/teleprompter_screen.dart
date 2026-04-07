@@ -49,10 +49,8 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     _sub = _speech.events.listen((event) {
       if (event.type == SpeechEventType.transcript) {
         final gen = _generation;
-        // Ignore events from a stale ASR session (before reset)
-        if (gen != _generation) return;
         final pos = _matcher.match(event.text, isFinal: event.isFinal);
-        if (gen != _generation) return; // reset happened during match
+        if (gen != _generation) return; // reset happened during processing
         setState(() {
           _currentWord = pos;
           _currentSentence = _matcher.currentSentence;
@@ -95,6 +93,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   }
 
   void _skipSentence(int delta) {
+    if (_script.sentences.isEmpty) return;
     final newIndex = (_currentSentence + delta)
         .clamp(0, _script.sentences.length - 1);
     _matcher.jumpToSentence(newIndex);

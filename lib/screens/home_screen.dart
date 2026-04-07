@@ -24,9 +24,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final history = prefs.getStringList(_historyKey) ?? [];
+    if (!mounted) return;
     setState(() {
       _scriptHistory = history;
-      if (_scriptHistory.isNotEmpty) {
+      if (_scriptHistory.isNotEmpty && _controller.text.isEmpty) {
         _controller.text = _scriptHistory.first;
       }
     });

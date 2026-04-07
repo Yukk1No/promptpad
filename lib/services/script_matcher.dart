@@ -12,9 +12,6 @@ class ScriptMatcher {
   /// The collapsed source text (all words joined by single space).
   String _sourceText = '';
 
-  /// Lowercased, letters/numbers/whitespace only.
-  String _normalizedSource = '';
-
   /// Source words split from the remaining suffix.
   List<String> _sourceWords = [];
 
@@ -43,7 +40,6 @@ class ScriptMatcher {
   void loadScript(Script script) {
     _script = script;
     _sourceText = script.tokens.map((t) => t.raw).join(' ');
-    _normalizedSource = _normalize(_sourceText);
     _sourceWords = _sourceText.split(RegExp(r'\s+'));
     _matchStartOffset = 0;
     _recognizedCharCount = 0;
@@ -195,10 +191,13 @@ class ScriptMatcher {
 
   /// Character-level fuzzy match on the remaining source suffix.
   /// Returns number of characters matched from matchStartOffset.
+  ///
+  /// Uses _sourceText (not _normalizedSource) to avoid coordinate misalignment
+  /// when punctuation causes offset differences between the two strings.
   int _charLevelMatch(String spoken) {
-    if (_matchStartOffset >= _normalizedSource.length) return 0;
+    if (_matchStartOffset >= _sourceText.length) return 0;
 
-    final remainingSource = _normalizedSource.substring(_matchStartOffset);
+    final remainingSource = _sourceText.substring(_matchStartOffset).toLowerCase();
     final normalizedSpoken = _normalize(spoken);
     if (normalizedSpoken.isEmpty) return 0;
 

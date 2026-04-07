@@ -342,4 +342,58 @@ I will cover background and motivation.''';
       expect(matcher.confirmedPosition, 2);
     });
   });
+
+  group('Edge cases', () {
+    test('empty script produces no tokens or sentences', () {
+      final script = Script.fromText('');
+      expect(script.tokens, isEmpty);
+      expect(script.sentences, isEmpty);
+    });
+
+    test('metadata-only script produces no tokens or sentences', () {
+      final script = Script.fromText(
+          '**Title:** My Talk\n**Presenter:** Alice');
+      expect(script.tokens, isEmpty);
+      expect(script.sentences, isEmpty);
+    });
+
+    test('ScriptMatcher handles empty script without crashing', () {
+      final matcher = ScriptMatcher();
+      final script = Script.fromText('');
+      matcher.loadScript(script);
+      expect(matcher.totalSentences, 0);
+      expect(matcher.currentSentence, 0);
+      expect(matcher.confirmedPosition, 0);
+      // match should return 0 safely
+      final pos = matcher.match('hello world', isFinal: true);
+      expect(pos, 0);
+    });
+
+    test('final result is always delivered even when text matches last partial', () {
+      // This tests the fix for issue #1: _onResult must forward final results
+      // even if text == _lastPartial, so the matcher gets isFinal: true.
+      final script = Script.fromText('hello world goodbye');
+      final matcher = ScriptMatcher();
+      matcher.loadScript(script);
+
+      // Simulate partial then final with same text
+      final pos1 = matcher.match('hello world', isFinal: false);
+      expect(pos1, greaterThanOrEqualTo(1));
+
+      // Final result with same text should still advance matchStartOffset
+      final pos2 = matcher.match('hello world', isFinal: true);
+      expect(pos2, greaterThanOrEqualTo(pos1));
+
+      // Next ASR session should match from advanced offset
+      final pos3 = matcher.match('goodbye', isFinal: true);
+      expect(pos3, greaterThanOrEqualTo(pos2));
+    });
+
+    test('metadata lines after first heading are preserved as body text', () {
+      final script = Script.fromText(
+          '## Slide 1\n**bold text:** is speech here.');
+      // After a heading, **bold text:** should NOT be stripped as metadata
+      expect(script.tokens.any((t) => t.normalized == 'bold'), isTrue);
+    });
+  });
 }

@@ -48,33 +48,43 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
         ? widget.currentWord / widget.totalWords
         : 0.0;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.deferToChild,
-      onTap: () => setState(() => _visible = !_visible),
-      child: Stack(
-        children: [
-          // Progress bar (always visible)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 3,
-              backgroundColor: Colors.white10,
-              valueColor: AlwaysStoppedAnimation(
-                Theme.of(context).colorScheme.primary,
-              ),
+    final hasSkipTargets = widget.totalSentences > 0;
+
+    return Stack(
+      children: [
+        // Bottom layer: full-screen transparent tap target to toggle visibility
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => setState(() => _visible = !_visible),
+          ),
+        ),
+
+        // Progress bar (always visible)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 3,
+            backgroundColor: Colors.white10,
+            valueColor: AlwaysStoppedAnimation(
+              Theme.of(context).colorScheme.primary,
             ),
           ),
+        ),
 
-          // Controls panel
-          if (_visible)
-            Positioned(
-              bottom: 8,
-              left: 16,
-              right: 16,
-              child: SafeArea(
+        // Controls panel
+        if (_visible)
+          Positioned(
+            bottom: 8,
+            left: 16,
+            right: 16,
+            child: SafeArea(
+              child: GestureDetector(
+                // Prevent taps on the panel from toggling visibility
+                onTap: () {},
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -114,7 +124,9 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       // Skip prev
                       IconButton(
                         icon: const Icon(Icons.skip_previous_rounded, size: 20),
-                        onPressed: () => widget.onSkip(-1),
+                        onPressed: hasSkipTargets
+                            ? () => widget.onSkip(-1)
+                            : null,
                         tooltip: 'Previous sentence',
                         constraints: const BoxConstraints(),
                         padding: const EdgeInsets.all(8),
@@ -123,7 +135,9 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                       // Skip next
                       IconButton(
                         icon: const Icon(Icons.skip_next_rounded, size: 20),
-                        onPressed: () => widget.onSkip(1),
+                        onPressed: hasSkipTargets
+                            ? () => widget.onSkip(1)
+                            : null,
                         tooltip: 'Next sentence',
                         constraints: const BoxConstraints(),
                         padding: const EdgeInsets.all(8),
@@ -182,8 +196,8 @@ class _ControlsOverlayState extends State<ControlsOverlay> {
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

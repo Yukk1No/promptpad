@@ -9,6 +9,7 @@ class SpeechService {
   final SpeechToText _stt = SpeechToText();
   final _controller = StreamController<SpeechEvent>.broadcast();
   bool _isListening = false;
+  bool _disposed = false;
   String _lastPartial = '';
   String _locale = 'en-US';
 
@@ -19,42 +20,50 @@ class SpeechService {
     return _stt.initialize(
       onStatus: _onStatus,
       onError: (error) {
-        _controller.add(SpeechEvent.error(error.errorMsg));
+        if (!_disposed) {
+          _controller.add(SpeechEvent.error(error.errorMsg));
+        }
       },
     );
   }
 
   Future<void> start({String locale = 'en-US'}) async {
     if (_isListening) return;
-    _isListening = true;
     _lastPartial = '';
     _locale = locale;
-    _listen(locale);
-  }
-
-  void _listen(String locale) {
-    _stt.listen(
-      onResult: _onResult,
-      localeId: locale,
-      listenOptions: SpeechListenOptions(
-        listenMode: ListenMode.dictation,
-        partialResults: true,
-        cancelOnError: false,
-        onDevice: true,
-      ),
-    );
+    try {
+      _stt.listen(
+        onResult: _onResult,
+        localeId: locale,
+        listenOptions: SpeechListenOptions(
+          listenMode: ListenMode.dictation,
+          partialResults: true,
+          cancelOnError: false,
+          onDevice: true,
+        ),
+      );
+      _isListening = true;
+    } catch (e) {
+      _isListening = false;
+      if (!_disposed) {
+        _controller.add(SpeechEvent.error(e.toString()));
+      }
+    }
   }
 
   void _onResult(SpeechRecognitionResult result) {
     final text = result.recognizedWords;
-    if (text == _lastPartial) return;
+    // Only suppress duplicate non-final partials. Always forward final results.
+    if (text == _lastPartial && !result.finalResult) return;
     _lastPartial = text;
 
-    _controller.add(SpeechEvent.transcript(
-      text: text,
-      isFinal: result.finalResult,
-      confidence: result.confidence,
-    ));
+    if (!_disposed) {
+      _controller.add(SpeechEvent.transcript(
+        text: text,
+        isFinal: result.finalResult,
+        confidence: result.confidence,
+      ));
+    }
   }
 
   void _onStatus(String status) {
@@ -66,6 +75,26 @@ class SpeechService {
     }
   }
 
+  void _listen(String locale) {
+    try {
+      _stt.listen(
+        onResult: _onResult,
+        localeId: locale,
+        listenOptions: SpeechListenOptions(
+          listenMode: ListenMode.dictation,
+          partialResults: true,
+          cancelOnError: false,
+          onDevice: true,
+        ),
+      );
+    } catch (e) {
+      _isListening = false;
+      if (!_disposed) {
+        _controller.add(SpeechEvent.error(e.toString()));
+      }
+    }
+  }
+
   Future<void> stop() async {
     _isListening = false;
     await _stt.stop();
@@ -73,6 +102,7 @@ class SpeechService {
 
   void dispose() {
     _isListening = false;
+    _disposed = true;
     _stt.stop();
     _controller.close();
   }

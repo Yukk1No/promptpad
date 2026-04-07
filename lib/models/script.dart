@@ -47,12 +47,13 @@ class Script {
   /// Strip all lines that are not speech text:
   /// - `---` horizontal rules
   /// - `# Heading` lines (all levels)
-  /// - `**Key:** Value` metadata lines
+  /// - `**Key:** Value` metadata lines (only before the first heading or body text)
   /// - Empty lines
   /// Then strip remaining inline bold/italic markers from body text.
   static String _stripNonSpeechLines(String text) {
     final lines = text.split('\n');
     final kept = <String>[];
+    var seenBodyOrHeading = false;
 
     for (final line in lines) {
       final trimmed = line.trim();
@@ -64,11 +65,25 @@ class Script {
       if (RegExp(r'^\s*[-_*]{3,}\s*$').hasMatch(trimmed)) continue;
 
       // Skip markdown headings (any level)
-      if (RegExp(r'^#{1,6}\s+').hasMatch(trimmed)) continue;
+      // Sub-headings (## and below) indicate content sections have started,
+      // so metadata after them should be preserved as speech text.
+      final headingMatch = RegExp(r'^(#{1,6})\s+').firstMatch(trimmed);
+      if (headingMatch != null) {
+        if (headingMatch.group(1)!.length >= 2) {
+          seenBodyOrHeading = true;
+        }
+        continue;
+      }
 
       // Skip metadata lines like **Title:** Audio-Based...
-      // Pattern: line starts with **SomeKey:** (bold key followed by colon)
-      if (RegExp(r'^\*\*[^*]+:\*\*').hasMatch(trimmed)) continue;
+      // Only strip these before the first heading or body paragraph
+      if (!seenBodyOrHeading &&
+          RegExp(r'^\*\*[^*]+:\*\*').hasMatch(trimmed)) {
+        continue;
+      }
+
+      // This is body text
+      seenBodyOrHeading = true;
 
       // Strip inline bold/italic markers from body text
       kept.add(stripMarkdown(trimmed));
@@ -86,6 +101,7 @@ class Script {
     // Split on double-newline first to get paragraphs
     final paragraphs = text.split(RegExp(r'\n\s*\n'));
     String? pendingHeading;
+    var seenBodyOrHeading = false;
 
     for (final paragraph in paragraphs) {
       final trimmed = paragraph.trim();
@@ -104,12 +120,18 @@ class Script {
         // Skip horizontal rules
         if (RegExp(r'^[-_*]{3,}$').hasMatch(trimmedLine)) continue;
 
-        // Skip metadata lines: **Key:** Value
-        if (RegExp(r'^\*\*[^*]+:\*\*').hasMatch(trimmedLine)) continue;
+        // Skip metadata lines: **Key:** Value (only before first heading/body)
+        if (!seenBodyOrHeading &&
+            RegExp(r'^\*\*[^*]+:\*\*').hasMatch(trimmedLine)) {
+          continue;
+        }
 
         // Check for markdown heading (any level) -> annotation only
         final headingMatch = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(trimmedLine);
         if (headingMatch != null) {
+          if (headingMatch.group(1)!.length >= 2) {
+            seenBodyOrHeading = true;
+          }
           // Flush any buffered text as sentences before setting heading
           if (buffer.isNotEmpty) {
             _splitIntoSentences(buffer.toString(), sentences, pendingHeading);
@@ -119,6 +141,9 @@ class Script {
           pendingHeading = headingMatch.group(2)!.trim();
           continue;
         }
+
+        // This is body text
+        seenBodyOrHeading = true;
 
         if (buffer.isNotEmpty) buffer.write(' ');
         buffer.write(trimmedLine);
