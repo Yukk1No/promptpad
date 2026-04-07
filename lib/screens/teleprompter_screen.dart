@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import '../models/script.dart';
 import '../services/speech_service.dart';
 import '../services/script_matcher.dart';
@@ -20,6 +22,8 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   late final Script _script;
 
   StreamSubscription<SpeechEvent>? _sub;
+  Timer? _healthTimer;
+  double? _savedBrightness;
   bool _isRunning = false;
   bool _initialized = false;
   String _error = '';
@@ -28,7 +32,7 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   double _fontSize = 42;
   bool _mirrorMode = false;
   String _lastTranscript = '';
-  int _generation = 0; // increments on reset to ignore stale ASR events
+  int _generation = 0;
 
   @override
   void initState() {
@@ -50,29 +54,62 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
       if (event.type == SpeechEventType.transcript) {
         final gen = _generation;
         final pos = _matcher.match(event.text, isFinal: event.isFinal);
-        if (gen != _generation) return; // reset happened during processing
+        if (gen != _generation) return;
         setState(() {
           _currentWord = pos;
           _currentSentence = _matcher.currentSentence;
           _lastTranscript = event.text;
         });
       } else if (event.type == SpeechEventType.error) {
-        setState(() => _error = event.text);
+        // Don't show transient ASR errors — auto-restart handles them
       }
     });
   }
 
-  void _toggle() {
+  void _toggle() async {
     if (_isRunning) {
       _speech.stop();
+      _stopScreenKeepAlive();
     } else {
       _speech.start();
+      _startScreenKeepAlive();
     }
     setState(() => _isRunning = !_isRunning);
   }
 
+  /// Keep screen on and brightness max while running.
+  Future<void> _startScreenKeepAlive() async {
+    WakelockPlus.enable();
+    try {
+      _savedBrightness = await ScreenBrightness().application;
+      await ScreenBrightness().setApplicationScreenBrightness(1.0);
+    } catch (_) {
+      // brightness API may not be available
+    }
+    // Health check every 30s to prevent ASR stalling
+    _healthTimer?.cancel();
+    _healthTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _speech.healthCheck(),
+    );
+  }
+
+  Future<void> _stopScreenKeepAlive() async {
+    _healthTimer?.cancel();
+    _healthTimer = null;
+    WakelockPlus.disable();
+    try {
+      if (_savedBrightness != null) {
+        await ScreenBrightness()
+            .setApplicationScreenBrightness(_savedBrightness!);
+      } else {
+        await ScreenBrightness().resetApplicationScreenBrightness();
+      }
+    } catch (_) {}
+  }
+
   void _resetPosition() async {
-    _generation++; // invalidate any in-flight ASR events
+    _generation++;
     final wasRunning = _isRunning;
     if (wasRunning) await _speech.stop();
     _matcher.reset();
@@ -82,7 +119,6 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
       _lastTranscript = '';
       _isRunning = false;
     });
-    // Restart ASR with a fresh session if it was running
     if (wasRunning) {
       await Future.delayed(const Duration(milliseconds: 200));
       if (mounted) {
@@ -96,21 +132,22 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     if (_script.sentences.isEmpty) return;
     final newIndex = (_currentSentence + delta)
         .clamp(0, _script.sentences.length - 1);
-    _generation++; // invalidate stale ASR events
+    _generation++;
     _matcher.jumpToSentence(newIndex);
     setState(() {
       _currentSentence = newIndex;
       _currentWord = _matcher.confirmedPosition;
       _lastTranscript = '';
     });
-    // Restart ASR to clear accumulated text
     if (_isRunning) _speech.restart();
   }
 
   @override
   void dispose() {
     _sub?.cancel();
+    _healthTimer?.cancel();
     _speech.dispose();
+    _stopScreenKeepAlive();
     super.dispose();
   }
 
@@ -139,51 +176,52 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     return Scaffold(
       body: SafeArea(
         child: Stack(
-        children: [
-          ScriptDisplay(
-            script: _script,
-            currentWord: _currentWord,
-            currentSentence: _currentSentence,
-            fontSize: _fontSize,
-            mirror: _mirrorMode,
-          ),
-
-          if (_lastTranscript.isNotEmpty)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                color: Colors.black54,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  _lastTranscript,
-                  style: const TextStyle(fontSize: 12, color: Colors.white38),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+          children: [
+            ScriptDisplay(
+              script: _script,
+              currentWord: _currentWord,
+              currentSentence: _currentSentence,
+              fontSize: _fontSize,
+              mirror: _mirrorMode,
             ),
 
-          ControlsOverlay(
-            initialized: _initialized,
-            isRunning: _isRunning,
-            fontSize: _fontSize,
-            mirrorMode: _mirrorMode,
-            currentWord: _currentWord,
-            totalWords: _script.tokens.length,
-            currentSentence: _currentSentence,
-            totalSentences: _script.sentences.length,
-            onToggle: _toggle,
-            onReset: _resetPosition,
-            onSkip: _skipSentence,
-            onFontSizeChanged: (v) => setState(() => _fontSize = v),
-            onMirrorChanged: (v) => setState(() => _mirrorMode = v),
-            onExit: () => Navigator.pop(context),
-          ),
-        ],
-      ),
+            // Transcript bar — single line, auto-truncated
+            if (_lastTranscript.isNotEmpty && _isRunning)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  color: Colors.black54,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 6),
+                  child: Text(
+                    _lastTranscript,
+                    style: const TextStyle(fontSize: 11, color: Colors.white30),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+
+            ControlsOverlay(
+              initialized: _initialized,
+              isRunning: _isRunning,
+              fontSize: _fontSize,
+              mirrorMode: _mirrorMode,
+              currentWord: _currentWord,
+              totalWords: _script.tokens.length,
+              currentSentence: _currentSentence,
+              totalSentences: _script.sentences.length,
+              onToggle: _toggle,
+              onReset: _resetPosition,
+              onSkip: _skipSentence,
+              onFontSizeChanged: (v) => setState(() => _fontSize = v),
+              onMirrorChanged: (v) => setState(() => _mirrorMode = v),
+              onExit: () => Navigator.pop(context),
+            ),
+          ],
+        ),
       ),
     );
   }

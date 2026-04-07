@@ -52,6 +52,7 @@ class SpeechService {
   }
 
   void _onResult(SpeechRecognitionResult result) {
+    _sessionStart = DateTime.now(); // got a result, session is alive
     final text = result.recognizedWords;
     // Only suppress duplicate non-final partials. Always forward final results.
     if (text == _lastPartial && !result.finalResult) return;
@@ -66,12 +67,28 @@ class SpeechService {
     }
   }
 
+  DateTime _sessionStart = DateTime.now();
+
   void _onStatus(String status) {
     // speech_to_text stops after silence; auto-restart for continuous listening
     if (status == 'notListening' && _isListening) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_isListening) _listen(_locale);
+      _lastPartial = ''; // clear accumulated text for fresh session
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (_isListening && !_disposed) _listen(_locale);
       });
+    }
+  }
+
+  /// Periodic health check — call from a timer to prevent ASR stalling.
+  /// iOS SFSpeechRecognizer can hang after ~1 min continuous use.
+  /// Force-restarts the session if no result received for too long.
+  Future<void> healthCheck() async {
+    if (!_isListening || _disposed) return;
+    final elapsed = DateTime.now().difference(_sessionStart).inSeconds;
+    if (elapsed > 50) {
+      // Force restart before iOS kills the session at ~60s
+      await restart();
+      _sessionStart = DateTime.now();
     }
   }
 
