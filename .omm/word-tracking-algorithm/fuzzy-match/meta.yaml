@@ -1,0 +1,12 @@
+created: 2026-04-08T11:06:55.459Z
+updated: 2026-04-08T11:07:27.513Z
+update_count: 2
+last_field: diagram
+kind: nested-class
+title: fuzzy-match
+children:
+  - edit-dist
+  - exact
+  - phonetic
+  - prefix
+parentPath: []

@@ -1,0 +1,21 @@
+graph TD
+    normalize["Normalize Input\nspokenLower + spokenWords"]
+    dual-match["Dual Strategy Match\nmax(charResult, wordResult)"]
+    advance["Advance Position\n_recognizedCharCount = max"]
+    tail-reanchor["Tail Re-Anchoring\nbounded by next sentence"]
+    stale-track["Stale Tracking\n_staleCount++/reset"]
+    resync["Resync Gate\nstaleCount >= 3 && isFinal"]
+    commit["Commit Offset\n_matchStartOffset = count"]
+    sentence-update["Update Sentence Index\n_updateSentenceFromCharCount()"]
+
+    normalize --> dual-match
+    dual-match --> advance
+    advance --> tail-reanchor
+    tail-reanchor --> stale-track
+    stale-track -->|"no progress"| resync
+    stale-track -->|"progress made"| commit
+    resync --> commit
+    commit -->|"isFinal only"| sentence-update
+
+    classDef concern fill:#f38ba8,stroke:#f38ba8,color:#1e1e2e
+    class resync concern

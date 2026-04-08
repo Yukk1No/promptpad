@@ -11,6 +11,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   static const _localeKey = 'speech_locale';
   static const _onDeviceKey = 'on_device';
+  static const _algorithmKey = 'tracking_algorithm';
 
   static const _supportedLocales = [
     ('en-US', 'English (US)'),
@@ -27,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _locale = 'en-US';
   bool _onDevice = true;
+  String _algorithm = 'classic';
   bool _loaded = false;
 
   @override
@@ -41,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _locale = prefs.getString(_localeKey) ?? 'en-US';
       _onDevice = prefs.getBool(_onDeviceKey) ?? true;
+      _algorithm = prefs.getString(_algorithmKey) ?? 'classic';
       _loaded = true;
     });
   }
@@ -49,6 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_localeKey, _locale);
     await prefs.setBool(_onDeviceKey, _onDevice);
+    await prefs.setString(_algorithmKey, _algorithm);
   }
 
   @override
@@ -95,6 +99,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (value) {
                     if (value == null) return;
                     setState(() => _locale = value);
+                    _save();
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Tracking algorithm
+                const Text(
+                  'Tracking',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white54,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _algorithm,
+                  decoration: InputDecoration(
+                    labelText: 'Tracking Algorithm',
+                    filled: true,
+                    fillColor: const Color(0xFF1A1A1A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'classic',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Classic'),
+                          Text(
+                            'Simple dual-strategy matching. Fast, lower resource usage.',
+                            style: TextStyle(fontSize: 11, color: Colors.white38),
+                          ),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'advanced',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Advanced (Beta)'),
+                          Text(
+                            'Beam search with drift recovery. More robust, slightly higher resource usage.',
+                            style: TextStyle(fontSize: 11, color: Colors.white38),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _algorithm = value);
                     _save();
                   },
                 ),

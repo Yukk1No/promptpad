@@ -5,7 +5,9 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import '../models/script.dart';
 import '../services/speech_service.dart';
+import '../services/script_matcher_base.dart';
 import '../services/script_matcher.dart';
+import '../services/script_matcher_v2.dart';
 import '../widgets/script_display.dart';
 import '../widgets/controls_overlay.dart';
 
@@ -19,7 +21,7 @@ class TeleprompterScreen extends StatefulWidget {
 
 class _TeleprompterScreenState extends State<TeleprompterScreen> {
   final SpeechService _speech = SpeechService();
-  final ScriptMatcher _matcher = ScriptMatcher();
+  late ScriptMatcherBase _matcher;
   late final Script _script;
 
   StreamSubscription<SpeechEvent>? _sub;
@@ -42,6 +44,8 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   void initState() {
     super.initState();
     _script = Script.fromText(widget.scriptText);
+    // Matcher is initialized in _initAll after loading prefs
+    _matcher = ScriptMatcher(); // default, replaced after prefs load
     _matcher.loadScript(_script);
     _initAll();
   }
@@ -52,6 +56,15 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     if (!mounted) return;
     _locale = prefs.getString('speech_locale') ?? 'en-US';
     _onDevice = prefs.getBool('on_device') ?? true;
+
+    // Select tracking algorithm
+    final algorithm = prefs.getString('tracking_algorithm') ?? 'classic';
+    if (algorithm == 'advanced') {
+      final advMatcher = ScriptMatcherV2();
+      advMatcher.loadScript(_script);
+      _matcher = advMatcher;
+    }
+
     await _initSpeech();
   }
 

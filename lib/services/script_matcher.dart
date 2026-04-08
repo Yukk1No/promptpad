@@ -1,12 +1,13 @@
 import 'dart:math';
 import '../models/script.dart';
+import 'script_matcher_base.dart';
 
 /// Speech matcher with tail-match re-anchoring for drift recovery.
 ///
 /// Dual strategy: char-level + word-level matching from textream.
 /// Tail-match: last few spoken words searched ahead to correct drift.
 /// Stale detection + resync for catastrophic loss.
-class ScriptMatcher {
+class ScriptMatcher implements ScriptMatcherBase {
   Script? _script;
 
   String _sourceText = '';
@@ -33,12 +34,16 @@ class ScriptMatcher {
   static final _whitespaceRe = RegExp(r'\s+');
   static final _nonAlnumRe = RegExp(r'[^a-z0-9]');
 
+  @override
   int get currentSentence => _currentSentence;
+  @override
   int get totalSentences => _script?.sentences.length ?? 0;
   int get staleCount => _staleCount;
 
+  @override
   int get confirmedPosition => _charCountToWordIndex(_recognizedCharCount);
 
+  @override
   void loadScript(Script script) {
     _script = script;
     _sourceText = script.tokens.map((t) => t.raw).join(' ');
@@ -78,6 +83,7 @@ class ScriptMatcher {
     }
   }
 
+  @override
   void reset() {
     _matchStartOffset = 0;
     _recognizedCharCount = 0;
@@ -85,6 +91,7 @@ class ScriptMatcher {
     _staleCount = 0;
   }
 
+  @override
   void jumpTo(int wordIndex) {
     final script = _script;
     if (script == null) return;
@@ -97,6 +104,7 @@ class ScriptMatcher {
     _matchStartOffset = charPos;
   }
 
+  @override
   void jumpToSentence(int sentenceIndex) {
     final script = _script;
     if (script == null || script.sentences.isEmpty) return;
@@ -110,6 +118,7 @@ class ScriptMatcher {
   }
 
   /// Process a spoken transcript. Returns the current word index.
+  @override
   int match(String spoken, {bool isFinal = false}) {
     if (_script == null || _sourceText.isEmpty) return 0;
 

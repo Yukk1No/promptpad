@@ -6,6 +6,38 @@ class Script {
 
   Script({required this.raw, required this.tokens, required this.sentences});
 
+  /// Whether a word is an "anchor" — a distinctive token useful for re-syncing.
+  ///
+  /// A word is an anchor if it:
+  /// - Contains digits (numbers, dates, codes)
+  /// - Is an English word in a non-English script (mixed-language)
+  /// - Is longer than 6 characters (likely distinctive)
+  /// - Is ALL CAPS with 2+ letters (acronym/abbreviation)
+  static bool isAnchorWord(String raw, String normalized) {
+    // Contains digits
+    if (RegExp(r'\d').hasMatch(raw)) return true;
+
+    // ALL CAPS with 2+ alphabetic characters (acronyms like "API", "NASA")
+    final letters = raw.replaceAll(RegExp(r'[^a-zA-Z]'), '');
+    if (letters.length >= 2 && letters == letters.toUpperCase()) return true;
+
+    // Mixed-language anchor: an ASCII-only word surrounded by non-ASCII context.
+    // We detect this by checking if the raw word is purely ASCII-alpha while
+    // being long enough to be meaningful (≥3 chars), AND the normalized form
+    // is also purely lowercase-ascii — this catches English words in CJK scripts.
+    if (normalized.length >= 3 &&
+        RegExp(r'^[a-z]+$').hasMatch(normalized) &&
+        RegExp(r'^[a-zA-Z]+$').hasMatch(raw)) {
+      // Only flag as mixed-language anchor if ≥4 chars (avoid "a", "the", etc.)
+      if (normalized.length >= 4) return true;
+    }
+
+    // Longer than 6 characters (distinctive term)
+    if (normalized.length > 6) return true;
+
+    return false;
+  }
+
   /// Shared normalization used by both Script and ScriptMatcher.
   static String normalizeWord(String word) {
     return word
@@ -36,6 +68,7 @@ class Script {
         normalized: normalized,
         metaphone: metaphone,
         charOffset: start,
+        isAnchor: isAnchorWord(word, normalized),
       ));
       offset = start + word.length;
     }
@@ -222,6 +255,7 @@ class ScriptToken {
   final String normalized;
   final String metaphone;
   final int charOffset;
+  final bool isAnchor;
 
   const ScriptToken({
     required this.index,
@@ -229,6 +263,7 @@ class ScriptToken {
     required this.normalized,
     required this.metaphone,
     required this.charOffset,
+    this.isAnchor = false,
   });
 }
 
