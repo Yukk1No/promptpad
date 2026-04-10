@@ -17,7 +17,7 @@ No fixed scroll speed. No foot pedal. Just your voice.
 - **Voice-driven tracking** — Real-time speech recognition matches your spoken words against the script and auto-scrolls to keep up
 - **Two tracking algorithms** — Classic (fast, low overhead) and Advanced (beam search with drift recovery)
 - **Multi-language support** — English, Chinese, Japanese, Korean, Spanish, French, German, Portuguese, and more
-- **On-device recognition** — Works offline with on-device ASR models (when available)
+- **On-device recognition (iOS)** — iOS supports on-device ASR for offline use; Android has not implemented offline recognition and requires a network connection
 - **Mirror mode** — Horizontal flip for teleprompter glass/beam splitter setups
 - **Smart recovery** — Phonetic matching (Double Metaphone), tail-match re-anchoring, and automatic resync when you go off-script
 - **Markdown support** — Paste markdown scripts; headings become section markers, bold/italic is stripped for clean display
@@ -25,6 +25,13 @@ No fixed scroll speed. No foot pedal. Just your voice.
 - **Screen management** — Wakelock and max brightness while running
 
 ## Getting Started
+
+### Platform Support
+
+| Platform | Status |
+|----------|--------|
+| iOS | Primarily developed and tested on iOS |
+| Android | Builds and runs, but has not been thoroughly tested. Offline speech recognition is not implemented. Contributions and bug reports welcome! |
 
 ### Prerequisites
 
@@ -66,7 +73,7 @@ The matching engine runs a three-layer pipeline:
 |---------|------------|
 | Language / Locale | Speech recognition language (10 languages) |
 | Tracking Algorithm | Classic (V1) or Advanced with beam search (V2) |
-| On-device recognition | Use local ASR models for offline/faster recognition |
+| On-device recognition | Use on-device ASR models (iOS only; no effect on Android) |
 | Default Font Size | Initial display size (28–56pt, adjustable during playback) |
 
 ## Inspiration
