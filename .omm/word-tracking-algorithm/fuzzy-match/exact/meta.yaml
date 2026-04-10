@@ -1,9 +1,0 @@
-created: 2026-04-08T11:07:49.473Z
-updated: 2026-04-08T11:07:49.473Z
-update_count: 1
-last_field: description
-kind: nested-class
-title: exact
-children: []
-parentPath:
-  - fuzzy-match
