@@ -46,8 +46,8 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
 
   // Stale detection
   int _staleCount = 0;
-  static const int _staleThreshold = 3;
-  static const int _resyncLookahead = 8;
+  static const int _staleThreshold = 4;
+  static const int _resyncLookahead = 6;
 
   // Beam state (for mode tracking + recovery)
   List<_Hypothesis> _beam = [];
@@ -190,13 +190,13 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
       _staleCount++;
     }
 
-    // --- Recovery: resync or beam-based ---
-    if (_staleCount >= _staleThreshold && spoken.trim().isNotEmpty) {
+    // --- Recovery: resync or beam-based (only on finals, like V1) ---
+    if (_staleCount >= _staleThreshold && isFinal && spoken.trim().isNotEmpty) {
       // Try sentence-ahead resync first
       if (_resyncMatch(tailNorm.isNotEmpty ? tailNorm : spokenWords)) {
         _staleCount = 0;
-      } else if (_staleCount >= _staleThreshold * 2) {
-        // Beam-based anchor recovery for persistent stale
+      } else if (_staleCount >= _staleThreshold * 3) {
+        // Beam-based anchor recovery for persistent stale (forward only)
         _beamRecovery(tailNorm.isNotEmpty ? tailNorm : spokenWords);
       }
     }
@@ -497,8 +497,8 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     var bestScore = 0.0;
     var bestPos = -1;
 
-    // Search anchors in ±50 word window
-    final lo = max(0, currentWordIdx - 50);
+    // Search anchors FORWARD only (no backward jumps)
+    final lo = currentWordIdx;
     final hi = min(totalWords, currentWordIdx + 50);
 
     for (final ai in _anchorIndices) {
@@ -510,8 +510,8 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
       }
     }
 
-    // Also try every 3rd position for non-anchor recovery
-    for (var pos = max(lo, currentWordIdx); pos < hi; pos += 3) {
+    // Also try every 3rd position for non-anchor recovery (forward only)
+    for (var pos = lo; pos < hi; pos += 3) {
       if (_anchorIndices.contains(pos)) continue;
       final score = _scoreAnchorMatch(spkNorm, pos);
       if (score > bestScore * 0.8 && score > 15.0) {
