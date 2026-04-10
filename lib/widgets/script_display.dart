@@ -190,37 +190,20 @@ class _ScriptDisplayState extends State<ScriptDisplay> {
       sentenceStartWord.putIfAbsent(entry.value, () => entry.key);
     }
 
-    final child = Stack(
-        children: [
-          SingleChildScrollView(
-            controller: _scrollController,
-            padding: EdgeInsets.symmetric(
-              horizontal: 32,
-              vertical: screenHeight * 0.4,
-            ),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: widget.fontSize * 0.4,
-              children: _buildWrapChildren(
-                context, tokens, wordToSentence,
-                sentenceStartWord, headingBefore,
-              ),
-            ),
-          ),
-
-          // Reference line at 1/3 from top
-          Positioned(
-            top: screenHeight / 3,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Container(
-                height: 2,
-                color: Theme.of(context).colorScheme.primary.withAlpha(40),
-              ),
-            ),
-          ),
-        ],
+    final child = SingleChildScrollView(
+      controller: _scrollController,
+      padding: EdgeInsets.symmetric(
+        horizontal: 32,
+        vertical: screenHeight * 0.4,
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: widget.fontSize * 0.4,
+        children: _buildWrapChildren(
+          context, tokens, wordToSentence,
+          sentenceStartWord, headingBefore,
+        ),
+      ),
     );
 
     if (widget.mirror) {

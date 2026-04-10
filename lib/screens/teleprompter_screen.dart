@@ -56,6 +56,10 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     if (!mounted) return;
     _locale = prefs.getString('speech_locale') ?? 'en-US';
     _onDevice = prefs.getBool('on_device') ?? true;
+    final savedFontSize = prefs.getDouble('default_font_size');
+    if (savedFontSize != null) {
+      setState(() => _fontSize = savedFontSize);
+    }
 
     // Select tracking algorithm
     final algorithm = prefs.getString('tracking_algorithm') ?? 'classic';
