@@ -1,0 +1,2619 @@
+[
+  {
+    "time_ms": 1875,
+    "text": "right",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 2125,
+    "text": "right rather than",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 2375,
+    "text": "right rather than jogging",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 2625,
+    "text": "right rather than younger than",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 3375,
+    "text": "right rather than yeah",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.86977,
+        "end": 1.407947,
+        "start": 1.14,
+        "word": "right"
+      },
+      {
+        "conf": 1.0,
+        "end": 1.65,
+        "start": 1.407947,
+        "word": "rather"
+      },
+      {
+        "conf": 1.0,
+        "end": 1.77,
+        "start": 1.65,
+        "word": "than"
+      },
+      {
+        "conf": 0.362088,
+        "end": 2.04,
+        "start": 1.8,
+        "word": "yeah"
+      }
+    ]
+  },
+  {
+    "time_ms": 4500,
+    "text": "they",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 4750,
+    "text": "pick up",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 5500,
+    "text": "pick up",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 4.23,
+        "start": 3.96,
+        "word": "pick"
+      },
+      {
+        "conf": 1.0,
+        "end": 4.5,
+        "start": 4.23,
+        "word": "up"
+      }
+    ]
+  },
+  {
+    "time_ms": 6250,
+    "text": "that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 6750,
+    "text": "that the to",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 6875,
+    "text": "that that you've got",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 7125,
+    "text": "that that you've got get",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 7875,
+    "text": "that that you've got it",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.69064,
+        "end": 6.013464,
+        "start": 5.85,
+        "word": "that"
+      },
+      {
+        "conf": 0.817276,
+        "end": 6.131046,
+        "start": 6.013464,
+        "word": "that"
+      },
+      {
+        "conf": 0.858692,
+        "end": 6.33,
+        "start": 6.15,
+        "word": "you've"
+      },
+      {
+        "conf": 0.878509,
+        "end": 6.601451,
+        "start": 6.33,
+        "word": "got"
+      },
+      {
+        "conf": 0.535148,
+        "end": 6.84,
+        "start": 6.63,
+        "word": "it"
+      }
+    ]
+  },
+  {
+    "time_ms": 9125,
+    "text": "i didn't",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 9375,
+    "text": "i didn't i didn't",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 9625,
+    "text": "not now",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 9875,
+    "text": "not in our",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 10500,
+    "text": "not an hour",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 9.03,
+        "start": 8.76,
+        "word": "not"
+      },
+      {
+        "conf": 0.756001,
+        "end": 9.15,
+        "start": 9.03,
+        "word": "an"
+      },
+      {
+        "conf": 0.756001,
+        "end": 9.57,
+        "start": 9.15,
+        "word": "hour"
+      }
+    ]
+  },
+  {
+    "time_ms": 11750,
+    "text": "bye bye",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 12000,
+    "text": "by by the that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 12250,
+    "text": "by president next",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 12500,
+    "text": "by president nixon",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 13125,
+    "text": "by president next and",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.867026,
+        "end": 11.326258,
+        "start": 11.113501,
+        "word": "by"
+      },
+      {
+        "conf": 0.527859,
+        "end": 11.73,
+        "start": 11.34,
+        "word": "president"
+      },
+      {
+        "conf": 0.633264,
+        "end": 12.0,
+        "start": 11.73,
+        "word": "next"
+      },
+      {
+        "conf": 0.633264,
+        "end": 12.18,
+        "start": 12.0,
+        "word": "and"
+      }
+    ]
+  },
+  {
+    "time_ms": 14125,
+    "text": "president",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 14625,
+    "text": "president truman",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 15375,
+    "text": "president truman",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 13.83,
+        "start": 13.44,
+        "word": "president"
+      },
+      {
+        "conf": 0.638509,
+        "end": 14.31,
+        "start": 13.83,
+        "word": "truman"
+      }
+    ]
+  },
+  {
+    "time_ms": 16000,
+    "text": "they've been",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 16250,
+    "text": "they've been clarified",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 16500,
+    "text": "that encourages",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 16750,
+    "text": "that encouraging",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 17500,
+    "text": "that encouraging got a lot",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 17750,
+    "text": "that encouraging got all that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 18000,
+    "text": "that encouraging got all that it",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 18250,
+    "text": "that encouraging gotta look at it than",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 18875,
+    "text": "that encouraging gotta look that it",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 15.69,
+        "start": 15.48,
+        "word": "that"
+      },
+      {
+        "conf": 1.0,
+        "end": 16.47,
+        "start": 15.69,
+        "word": "encouraging"
+      },
+      {
+        "conf": 0.580433,
+        "end": 17.191793,
+        "start": 17.01,
+        "word": "gotta"
+      },
+      {
+        "conf": 0.423417,
+        "end": 17.351935,
+        "start": 17.191793,
+        "word": "look"
+      },
+      {
+        "conf": 0.492819,
+        "end": 17.49,
+        "start": 17.351935,
+        "word": "that"
+      },
+      {
+        "conf": 0.951273,
+        "end": 17.58,
+        "start": 17.49,
+        "word": "it"
+      }
+    ]
+  },
+  {
+    "time_ms": 20375,
+    "text": "we have",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 20875,
+    "text": "we have their",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 21125,
+    "text": "we have today",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 22000,
+    "text": "we have today",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 20.07,
+        "start": 19.83,
+        "word": "we"
+      },
+      {
+        "conf": 0.824495,
+        "end": 20.180186,
+        "start": 20.07,
+        "word": "have"
+      },
+      {
+        "conf": 1.0,
+        "end": 21.12,
+        "start": 20.481907,
+        "word": "today"
+      }
+    ]
+  },
+  {
+    "time_ms": 23500,
+    "text": "not a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 24000,
+    "text": "not a victory",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 24250,
+    "text": "not a victory a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 24750,
+    "text": "not a victory a potty",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 25375,
+    "text": "not a victory a potty",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 23.1,
+        "start": 22.68,
+        "word": "not"
+      },
+      {
+        "conf": 1.0,
+        "end": 23.22,
+        "start": 23.1,
+        "word": "a"
+      },
+      {
+        "conf": 1.0,
+        "end": 23.730203,
+        "start": 23.22,
+        "word": "victory"
+      },
+      {
+        "conf": 0.873171,
+        "end": 23.82,
+        "start": 23.730203,
+        "word": "a"
+      },
+      {
+        "conf": 0.498964,
+        "end": 24.36,
+        "start": 23.82,
+        "word": "potty"
+      }
+    ]
+  },
+  {
+    "time_ms": 26125,
+    "text": "but",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 26375,
+    "text": "but i don't",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 26625,
+    "text": "but a teleprompter",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 26875,
+    "text": "but a calibration",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 27375,
+    "text": "but a calibration of",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 27625,
+    "text": "but a calibration of freedom",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 28250,
+    "text": "but a calibration of freedom",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 25.89,
+        "start": 25.71,
+        "word": "but"
+      },
+      {
+        "conf": 1.0,
+        "end": 25.98,
+        "start": 25.89,
+        "word": "a"
+      },
+      {
+        "conf": 0.904121,
+        "end": 26.73,
+        "start": 25.98,
+        "word": "calibration"
+      },
+      {
+        "conf": 1.0,
+        "end": 26.85,
+        "start": 26.73,
+        "word": "of"
+      },
+      {
+        "conf": 1.0,
+        "end": 27.3,
+        "start": 26.85,
+        "word": "freedom"
+      }
+    ]
+  },
+  {
+    "time_ms": 29500,
+    "text": "campbell i",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 29750,
+    "text": "him writing and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 30500,
+    "text": "him writing and and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 31125,
+    "text": "him writing and and",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.757246,
+        "end": 28.752484,
+        "start": 28.44,
+        "word": "him"
+      },
+      {
+        "conf": 0.437358,
+        "end": 29.46,
+        "start": 28.8,
+        "word": "writing"
+      },
+      {
+        "conf": 1.0,
+        "end": 29.58,
+        "start": 29.46,
+        "word": "and"
+      },
+      {
+        "conf": 1.0,
+        "end": 30.06,
+        "start": 29.58,
+        "word": "and"
+      }
+    ]
+  },
+  {
+    "time_ms": 31875,
+    "text": "as well",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 32125,
+    "text": "as well and a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 32375,
+    "text": "and whether they be getting",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 33625,
+    "text": "and whether they be getting",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.595884,
+        "end": 31.35,
+        "start": 31.14,
+        "word": "and"
+      },
+      {
+        "conf": 1.0,
+        "end": 31.68,
+        "start": 31.362125,
+        "word": "whether"
+      },
+      {
+        "conf": 1.0,
+        "end": 31.83,
+        "start": 31.68,
+        "word": "they"
+      },
+      {
+        "conf": 1.0,
+        "end": 31.98,
+        "start": 31.83,
+        "word": "be"
+      },
+      {
+        "conf": 1.0,
+        "end": 32.46,
+        "start": 31.98,
+        "word": "getting"
+      }
+    ]
+  },
+  {
+    "time_ms": 34750,
+    "text": "signifying",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 35250,
+    "text": "signifying we know all",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 36250,
+    "text": "signifying reno all",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 34.5,
+        "start": 33.66,
+        "word": "signifying"
+      },
+      {
+        "conf": 0.603107,
+        "end": 34.868024,
+        "start": 34.5,
+        "word": "reno"
+      },
+      {
+        "conf": 0.606134,
+        "end": 35.13,
+        "start": 34.868024,
+        "word": "all"
+      }
+    ]
+  },
+  {
+    "time_ms": 36750,
+    "text": "at",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 36875,
+    "text": "well it",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 37625,
+    "text": "well it change",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 38375,
+    "text": "at well it change",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.622357,
+        "end": 36.36,
+        "start": 36.18,
+        "word": "at"
+      },
+      {
+        "conf": 1.0,
+        "end": 36.57,
+        "start": 36.360348,
+        "word": "well"
+      },
+      {
+        "conf": 0.857378,
+        "end": 36.69,
+        "start": 36.57,
+        "word": "it"
+      },
+      {
+        "conf": 1.0,
+        "end": 37.29,
+        "start": 36.72,
+        "word": "change"
+      }
+    ]
+  },
+  {
+    "time_ms": 39375,
+    "text": "i",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 39625,
+    "text": "try it on",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 40250,
+    "text": "try it on because",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 40500,
+    "text": "try it on be are",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 41000,
+    "text": "try it on be are you",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 42000,
+    "text": "try it on be are you and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 42250,
+    "text": "try it on be are you and all my",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 42500,
+    "text": "try it on be are you and almighty god",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 43875,
+    "text": "try it on be are you and almighty god",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.779705,
+        "end": 39.03,
+        "start": 38.55,
+        "word": "try"
+      },
+      {
+        "conf": 0.779705,
+        "end": 39.15,
+        "start": 39.03,
+        "word": "it"
+      },
+      {
+        "conf": 1.0,
+        "end": 39.66,
+        "start": 39.27,
+        "word": "on"
+      },
+      {
+        "conf": 0.807713,
+        "end": 39.864675,
+        "start": 39.66,
+        "word": "be"
+      },
+      {
+        "conf": 0.295368,
+        "end": 40.14,
+        "start": 39.93,
+        "word": "are"
+      },
+      {
+        "conf": 1.0,
+        "end": 40.71,
+        "start": 40.149708,
+        "word": "you"
+      },
+      {
+        "conf": 1.0,
+        "end": 41.64,
+        "start": 41.34,
+        "word": "and"
+      },
+      {
+        "conf": 1.0,
+        "end": 42.18,
+        "start": 41.64,
+        "word": "almighty"
+      },
+      {
+        "conf": 1.0,
+        "end": 42.72,
+        "start": 42.18,
+        "word": "god"
+      }
+    ]
+  },
+  {
+    "time_ms": 44125,
+    "text": "the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 44875,
+    "text": "the fame",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 45625,
+    "text": "the same amount",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 45875,
+    "text": "the same problem out",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 46500,
+    "text": "the fame alamo",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.849558,
+        "end": 43.840085,
+        "start": 43.68,
+        "word": "the"
+      },
+      {
+        "conf": 0.509088,
+        "end": 44.55,
+        "start": 43.84158,
+        "word": "fame"
+      },
+      {
+        "conf": 0.532546,
+        "end": 45.51,
+        "start": 44.88,
+        "word": "alamo"
+      }
+    ]
+  },
+  {
+    "time_ms": 47500,
+    "text": "op",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 47750,
+    "text": "op all",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 48000,
+    "text": "op or",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 48250,
+    "text": "op or there",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 48500,
+    "text": "off all their",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 48875,
+    "text": "off all their pride",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 50125,
+    "text": "off all their pride nearly",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 50375,
+    "text": "off all their pride nearly a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 50625,
+    "text": "off all their pride nearly eight",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 51125,
+    "text": "off all their pride nearly a century",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 51375,
+    "text": "off all their pride nearly a century and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 51625,
+    "text": "off all their pride nearly a century and three",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 52000,
+    "text": "off all their pride nearly a century and three quarter",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 52250,
+    "text": "off all their pride nearly a century and three quarter the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 52500,
+    "text": "off all their pride nearly a century and three quarter to go",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 53500,
+    "text": "op all their guy nearly a century and three quarter to go",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.450683,
+        "end": 47.07,
+        "start": 46.71,
+        "word": "op"
+      },
+      {
+        "conf": 0.792028,
+        "end": 47.37,
+        "start": 47.086941,
+        "word": "all"
+      },
+      {
+        "conf": 0.856633,
+        "end": 47.82,
+        "start": 47.37,
+        "word": "their"
+      },
+      {
+        "conf": 0.336966,
+        "end": 48.72,
+        "start": 48.15,
+        "word": "guy"
+      },
+      {
+        "conf": 1.0,
+        "end": 50.01,
+        "start": 49.62,
+        "word": "nearly"
+      },
+      {
+        "conf": 1.0,
+        "end": 50.22,
+        "start": 50.01,
+        "word": "a"
+      },
+      {
+        "conf": 1.0,
+        "end": 50.82,
+        "start": 50.28,
+        "word": "century"
+      },
+      {
+        "conf": 1.0,
+        "end": 51.03,
+        "start": 50.82,
+        "word": "and"
+      },
+      {
+        "conf": 1.0,
+        "end": 51.3,
+        "start": 51.03,
+        "word": "three"
+      },
+      {
+        "conf": 0.661508,
+        "end": 51.75,
+        "start": 51.3,
+        "word": "quarter"
+      },
+      {
+        "conf": 0.463512,
+        "end": 51.87,
+        "start": 51.75,
+        "word": "to"
+      },
+      {
+        "conf": 0.596829,
+        "end": 52.41,
+        "start": 51.87,
+        "word": "go"
+      }
+    ]
+  },
+  {
+    "time_ms": 54250,
+    "text": "the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 54750,
+    "text": "the world is",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 55125,
+    "text": "the world is very",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 55375,
+    "text": "the world is very different",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 55625,
+    "text": "the world is very different now",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 56625,
+    "text": "the world is very different now",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 53.82,
+        "start": 53.7,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 54.36,
+        "start": 53.82,
+        "word": "world"
+      },
+      {
+        "conf": 1.0,
+        "end": 54.48,
+        "start": 54.36,
+        "word": "is"
+      },
+      {
+        "conf": 1.0,
+        "end": 54.81,
+        "start": 54.48,
+        "word": "very"
+      },
+      {
+        "conf": 1.0,
+        "end": 55.2,
+        "start": 54.81,
+        "word": "different"
+      },
+      {
+        "conf": 1.0,
+        "end": 55.74,
+        "start": 55.2,
+        "word": "now"
+      }
+    ]
+  },
+  {
+    "time_ms": 57875,
+    "text": "oh",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 58250,
+    "text": "oh man",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 58750,
+    "text": "oh man whole that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 59000,
+    "text": "oh man oh that is",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 59500,
+    "text": "oh man oh that is model",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 60000,
+    "text": "oh man oh that is model and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 60750,
+    "text": "oh man whole that is model hand",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 57.33,
+        "start": 57.21,
+        "word": "oh"
+      },
+      {
+        "conf": 1.0,
+        "end": 57.9,
+        "start": 57.33,
+        "word": "man"
+      },
+      {
+        "conf": 0.3267,
+        "end": 58.32,
+        "start": 57.9,
+        "word": "whole"
+      },
+      {
+        "conf": 0.919494,
+        "end": 58.53,
+        "start": 58.368267,
+        "word": "that"
+      },
+      {
+        "conf": 0.446293,
+        "end": 58.68,
+        "start": 58.53,
+        "word": "is"
+      },
+      {
+        "conf": 0.777667,
+        "end": 59.103951,
+        "start": 58.71,
+        "word": "model"
+      },
+      {
+        "conf": 0.662567,
+        "end": 59.7,
+        "start": 59.103951,
+        "word": "hand"
+      }
+    ]
+  },
+  {
+    "time_ms": 61375,
+    "text": "the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 61875,
+    "text": "the power",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 62125,
+    "text": "the power to",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 62875,
+    "text": "the power to abolish",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 63375,
+    "text": "the power to body",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 61.08,
+        "start": 60.9,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 61.62,
+        "start": 61.11,
+        "word": "power"
+      },
+      {
+        "conf": 0.603902,
+        "end": 61.83,
+        "start": 61.62,
+        "word": "to"
+      },
+      {
+        "conf": 0.555504,
+        "end": 62.52,
+        "start": 61.92,
+        "word": "body"
+      }
+    ]
+  },
+  {
+    "time_ms": 64500,
+    "text": "all",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 64750,
+    "text": "all all",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 65000,
+    "text": "all all the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 65250,
+    "text": "all all that you're",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 65500,
+    "text": "all all documents",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 65750,
+    "text": "all all the human population",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 66000,
+    "text": "all all document poverty",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 66750,
+    "text": "all all document poverty",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 64.05,
+        "start": 63.63,
+        "word": "all"
+      },
+      {
+        "conf": 0.674701,
+        "end": 64.576289,
+        "start": 64.14,
+        "word": "all"
+      },
+      {
+        "conf": 0.515705,
+        "end": 65.22,
+        "start": 64.59,
+        "word": "document"
+      },
+      {
+        "conf": 1.0,
+        "end": 65.85,
+        "start": 65.22,
+        "word": "poverty"
+      }
+    ]
+  },
+  {
+    "time_ms": 67375,
+    "text": "at",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 67625,
+    "text": "at all",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 68125,
+    "text": "at all on",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 68375,
+    "text": "at all on top",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 68625,
+    "text": "at all on the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 68875,
+    "text": "at all on the human",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 69125,
+    "text": "at all on the human life",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 69625,
+    "text": "at all on the human life",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 67.14,
+        "start": 66.93,
+        "word": "at"
+      },
+      {
+        "conf": 1.0,
+        "end": 67.44,
+        "start": 67.14,
+        "word": "all"
+      },
+      {
+        "conf": 0.901893,
+        "end": 67.92,
+        "start": 67.53,
+        "word": "on"
+      },
+      {
+        "conf": 0.534273,
+        "end": 68.1,
+        "start": 67.95,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 68.43,
+        "start": 68.135332,
+        "word": "human"
+      },
+      {
+        "conf": 0.730358,
+        "end": 68.82,
+        "start": 68.43,
+        "word": "life"
+      }
+    ]
+  },
+  {
+    "time_ms": 71000,
+    "text": "and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 71250,
+    "text": "and yet",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 71500,
+    "text": "and yet the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 72000,
+    "text": "and yet the pain",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 72250,
+    "text": "and yet the aim",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 72500,
+    "text": "and yet the a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 73125,
+    "text": "and yet the a revolutionary",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 73625,
+    "text": "and yet the a revolutionary believe",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 74625,
+    "text": "and yet the a revolutionary bullied",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 70.62,
+        "start": 70.38,
+        "word": "and"
+      },
+      {
+        "conf": 1.0,
+        "end": 70.98,
+        "start": 70.62,
+        "word": "yet"
+      },
+      {
+        "conf": 0.888329,
+        "end": 71.125173,
+        "start": 70.98,
+        "word": "the"
+      },
+      {
+        "conf": 0.368644,
+        "end": 71.76,
+        "start": 71.25,
+        "word": "a"
+      },
+      {
+        "conf": 1.0,
+        "end": 72.96,
+        "start": 72.06,
+        "word": "revolutionary"
+      },
+      {
+        "conf": 0.514829,
+        "end": 73.5,
+        "start": 72.96,
+        "word": "bullied"
+      }
+    ]
+  },
+  {
+    "time_ms": 75625,
+    "text": "paul",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 75875,
+    "text": "all work out",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 76000,
+    "text": "all were",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 76250,
+    "text": "all we can",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 76500,
+    "text": "paul wake up or",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 76750,
+    "text": "paul wake up or there",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 77000,
+    "text": "paul wake up or they're",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 77250,
+    "text": "paul wake up or there ought",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 78000,
+    "text": "paul car or their on",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.490279,
+        "end": 75.18,
+        "start": 74.91,
+        "word": "paul"
+      },
+      {
+        "conf": 0.338545,
+        "end": 75.748579,
+        "start": 75.36,
+        "word": "car"
+      },
+      {
+        "conf": 0.88283,
+        "end": 76.066926,
+        "start": 75.825718,
+        "word": "or"
+      },
+      {
+        "conf": 0.186314,
+        "end": 76.5,
+        "start": 76.066926,
+        "word": "their"
+      },
+      {
+        "conf": 0.866763,
+        "end": 76.95,
+        "start": 76.56,
+        "word": "on"
+      }
+    ]
+  },
+  {
+    "time_ms": 78750,
+    "text": "ah",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 78875,
+    "text": "art",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 79125,
+    "text": "art gallery",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 79375,
+    "text": "art gallery a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 79625,
+    "text": "art gallery a huge",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 79875,
+    "text": "art gallery a huge around the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 80125,
+    "text": "art gallery a huge around the globe",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 81125,
+    "text": "art gallery a huge around the globe",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 78.42,
+        "start": 78.03,
+        "word": "art"
+      },
+      {
+        "conf": 0.927272,
+        "end": 78.810879,
+        "start": 78.42,
+        "word": "gallery"
+      },
+      {
+        "conf": 0.399736,
+        "end": 78.84,
+        "start": 78.810879,
+        "word": "a"
+      },
+      {
+        "conf": 0.528072,
+        "end": 79.2,
+        "start": 78.84,
+        "word": "huge"
+      },
+      {
+        "conf": 1.0,
+        "end": 79.62,
+        "start": 79.221533,
+        "word": "around"
+      },
+      {
+        "conf": 1.0,
+        "end": 79.68,
+        "start": 79.62,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 80.22,
+        "start": 79.68,
+        "word": "globe"
+      }
+    ]
+  },
+  {
+    "time_ms": 82000,
+    "text": "the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 82250,
+    "text": "the only",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 82500,
+    "text": "the probably better",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 83000,
+    "text": "the probably right that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 83250,
+    "text": "the probably right that makes",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 83500,
+    "text": "the probably right that man",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 84250,
+    "text": "probably that the right that man",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.409713,
+        "end": 81.93,
+        "start": 81.48,
+        "word": "probably"
+      },
+      {
+        "conf": 0.631345,
+        "end": 82.199246,
+        "start": 82.013877,
+        "word": "that"
+      },
+      {
+        "conf": 0.489834,
+        "end": 82.319341,
+        "start": 82.199246,
+        "word": "the"
+      },
+      {
+        "conf": 0.694551,
+        "end": 82.641123,
+        "start": 82.325178,
+        "word": "right"
+      },
+      {
+        "conf": 0.444245,
+        "end": 82.77,
+        "start": 82.65,
+        "word": "that"
+      },
+      {
+        "conf": 1.0,
+        "end": 83.4,
+        "start": 82.780679,
+        "word": "man"
+      }
+    ]
+  },
+  {
+    "time_ms": 85125,
+    "text": "calmness",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 85375,
+    "text": "come knocking",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 85625,
+    "text": "come not from",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 85875,
+    "text": "come not from the get",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 86125,
+    "text": "come not from the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 86375,
+    "text": "come not from the generosity of",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 86875,
+    "text": "come not from the generosity of the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 87125,
+    "text": "come not from the generosity of the day",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 87875,
+    "text": "come not from the generosity of the day",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 84.81,
+        "start": 84.45,
+        "word": "come"
+      },
+      {
+        "conf": 0.634395,
+        "end": 85.17,
+        "start": 84.81,
+        "word": "not"
+      },
+      {
+        "conf": 0.634395,
+        "end": 85.38,
+        "start": 85.2,
+        "word": "from"
+      },
+      {
+        "conf": 1.0,
+        "end": 85.5,
+        "start": 85.38,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 86.31,
+        "start": 85.5,
+        "word": "generosity"
+      },
+      {
+        "conf": 1.0,
+        "end": 86.4,
+        "start": 86.31,
+        "word": "of"
+      },
+      {
+        "conf": 1.0,
+        "end": 86.55,
+        "start": 86.4,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 86.97,
+        "start": 86.61,
+        "word": "day"
+      }
+    ]
+  },
+  {
+    "time_ms": 88500,
+    "text": "but",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 88750,
+    "text": "but from my",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 89250,
+    "text": "but from the hand of god",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 90500,
+    "text": "but from the hand of god",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 88.2,
+        "start": 87.9,
+        "word": "but"
+      },
+      {
+        "conf": 1.0,
+        "end": 88.41,
+        "start": 88.2,
+        "word": "from"
+      },
+      {
+        "conf": 0.558145,
+        "end": 88.5,
+        "start": 88.41,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 88.89,
+        "start": 88.513257,
+        "word": "hand"
+      },
+      {
+        "conf": 1.0,
+        "end": 88.98,
+        "start": 88.89,
+        "word": "of"
+      },
+      {
+        "conf": 1.0,
+        "end": 89.49,
+        "start": 88.98,
+        "word": "god"
+      }
+    ]
+  },
+  {
+    "time_ms": 91625,
+    "text": "we",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 91875,
+    "text": "we get",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 92125,
+    "text": "we cannot",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 92375,
+    "text": "we cannot agree",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 92625,
+    "text": "we cannot forget",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 92875,
+    "text": "we cannot forget today",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 93875,
+    "text": "we cannot forget today",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 91.35,
+        "start": 90.99,
+        "word": "we"
+      },
+      {
+        "conf": 1.0,
+        "end": 91.95,
+        "start": 91.38,
+        "word": "cannot"
+      },
+      {
+        "conf": 0.634047,
+        "end": 92.31,
+        "start": 91.95,
+        "word": "forget"
+      },
+      {
+        "conf": 1.0,
+        "end": 93.0,
+        "start": 92.34,
+        "word": "today"
+      }
+    ]
+  },
+  {
+    "time_ms": 94500,
+    "text": "that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 94750,
+    "text": "that we",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 95000,
+    "text": "that we are",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 95250,
+    "text": "that we are the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 95750,
+    "text": "that we are the air",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 96000,
+    "text": "that we are the air that that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 96750,
+    "text": "that we are the air that that per",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 96875,
+    "text": "that we are the air that that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 97375,
+    "text": "that we are the air that that revolution",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 97875,
+    "text": "that we are the air that that per revolution",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 94.2,
+        "start": 93.93,
+        "word": "that"
+      },
+      {
+        "conf": 1.0,
+        "end": 94.62,
+        "start": 94.2,
+        "word": "we"
+      },
+      {
+        "conf": 1.0,
+        "end": 94.77,
+        "start": 94.62,
+        "word": "are"
+      },
+      {
+        "conf": 1.0,
+        "end": 94.95,
+        "start": 94.77,
+        "word": "the"
+      },
+      {
+        "conf": 0.793166,
+        "end": 95.4,
+        "start": 95.01,
+        "word": "air"
+      },
+      {
+        "conf": 0.486969,
+        "end": 95.55,
+        "start": 95.4,
+        "word": "that"
+      },
+      {
+        "conf": 1.0,
+        "end": 95.82,
+        "start": 95.560518,
+        "word": "that"
+      },
+      {
+        "conf": 0.269642,
+        "end": 96.24,
+        "start": 95.82,
+        "word": "per"
+      },
+      {
+        "conf": 1.0,
+        "end": 97.17,
+        "start": 96.42,
+        "word": "revolution"
+      }
+    ]
+  },
+  {
+    "time_ms": 99125,
+    "text": "let the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 99625,
+    "text": "let the word",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 100250,
+    "text": "let the word gulp or",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 101000,
+    "text": "let the word gulp or",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.865538,
+        "end": 98.73,
+        "start": 98.43,
+        "word": "let"
+      },
+      {
+        "conf": 0.865538,
+        "end": 98.85,
+        "start": 98.73,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 99.24,
+        "start": 98.85,
+        "word": "word"
+      },
+      {
+        "conf": 0.460889,
+        "end": 99.625459,
+        "start": 99.24,
+        "word": "gulp"
+      },
+      {
+        "conf": 0.675966,
+        "end": 100.05,
+        "start": 99.625459,
+        "word": "or"
+      }
+    ]
+  },
+  {
+    "time_ms": 101500,
+    "text": "from the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 102000,
+    "text": "from the time",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 102250,
+    "text": "from the time and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 102500,
+    "text": "from the time and place",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 102750,
+    "text": "from the time and played",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 103375,
+    "text": "from the time and played",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 101.07,
+        "start": 100.8,
+        "word": "from"
+      },
+      {
+        "conf": 1.0,
+        "end": 101.31,
+        "start": 101.07,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 101.76,
+        "start": 101.37,
+        "word": "time"
+      },
+      {
+        "conf": 1.0,
+        "end": 101.88,
+        "start": 101.76,
+        "word": "and"
+      },
+      {
+        "conf": 0.520956,
+        "end": 102.36,
+        "start": 101.88,
+        "word": "played"
+      }
+    ]
+  },
+  {
+    "time_ms": 103875,
+    "text": "go",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 104625,
+    "text": "go friend and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 104875,
+    "text": "go rand paul",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 105375,
+    "text": "go friend and foe alike",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 106000,
+    "text": "go friend and foe alike",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.896698,
+        "end": 103.65,
+        "start": 103.38,
+        "word": "go"
+      },
+      {
+        "conf": 1.0,
+        "end": 104.13,
+        "start": 103.71,
+        "word": "friend"
+      },
+      {
+        "conf": 1.0,
+        "end": 104.37,
+        "start": 104.13,
+        "word": "and"
+      },
+      {
+        "conf": 1.0,
+        "end": 104.67,
+        "start": 104.4,
+        "word": "foe"
+      },
+      {
+        "conf": 1.0,
+        "end": 105.15,
+        "start": 104.67,
+        "word": "alike"
+      }
+    ]
+  },
+  {
+    "time_ms": 107000,
+    "text": "that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 107250,
+    "text": "that the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 108000,
+    "text": "that the portuguese",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 108250,
+    "text": "that the porch had been",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 108500,
+    "text": "that the poor kids than",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 108875,
+    "text": "that the poor can't compare",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 109875,
+    "text": "that the poor kids than pair us",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 110125,
+    "text": "that the poor kids can pay you a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 110375,
+    "text": "that the poor kids can pay you a new",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 110625,
+    "text": "that the poor kids can pay you a new generation",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 111125,
+    "text": "that the poor kids can pay you a new generation of",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 111375,
+    "text": "that the poor kids can pay you a new generation of americans",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 111875,
+    "text": "that the poor kids can pay you a new generation of american",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 112500,
+    "text": "that the poor kids than pay you a new generation of american",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 106.739121,
+        "start": 106.5,
+        "word": "that"
+      },
+      {
+        "conf": 0.58523,
+        "end": 106.861699,
+        "start": 106.74,
+        "word": "the"
+      },
+      {
+        "conf": 0.845293,
+        "end": 107.332632,
+        "start": 106.871799,
+        "word": "poor"
+      },
+      {
+        "conf": 0.474053,
+        "end": 107.64,
+        "start": 107.34,
+        "word": "kids"
+      },
+      {
+        "conf": 0.38958,
+        "end": 107.88,
+        "start": 107.688677,
+        "word": "than"
+      },
+      {
+        "conf": 0.372199,
+        "end": 108.39,
+        "start": 107.88,
+        "word": "pay"
+      },
+      {
+        "conf": 0.372199,
+        "end": 109.56,
+        "start": 109.38,
+        "word": "you"
+      },
+      {
+        "conf": 1.0,
+        "end": 109.71,
+        "start": 109.571301,
+        "word": "a"
+      },
+      {
+        "conf": 1.0,
+        "end": 110.01,
+        "start": 109.71,
+        "word": "new"
+      },
+      {
+        "conf": 1.0,
+        "end": 110.76,
+        "start": 110.04,
+        "word": "generation"
+      },
+      {
+        "conf": 1.0,
+        "end": 110.85,
+        "start": 110.76,
+        "word": "of"
+      },
+      {
+        "conf": 0.823922,
+        "end": 111.54,
+        "start": 110.85,
+        "word": "american"
+      }
+    ]
+  },
+  {
+    "time_ms": 113500,
+    "text": "on",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 114500,
+    "text": "on in the padres",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 114750,
+    "text": "on in this country",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 115125,
+    "text": "on in the country",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 113.31,
+        "start": 112.74,
+        "word": "on"
+      },
+      {
+        "conf": 1.0,
+        "end": 113.55,
+        "start": 113.34,
+        "word": "in"
+      },
+      {
+        "conf": 0.554484,
+        "end": 113.7,
+        "start": 113.55,
+        "word": "the"
+      },
+      {
+        "conf": 0.546104,
+        "end": 114.39,
+        "start": 113.79,
+        "word": "country"
+      }
+    ]
+  },
+  {
+    "time_ms": 116625,
+    "text": "hampered by",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 117375,
+    "text": "hampered by war",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 117875,
+    "text": "hampered by war",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 116.19,
+        "start": 115.71,
+        "word": "hampered"
+      },
+      {
+        "conf": 1.0,
+        "end": 116.43,
+        "start": 116.19,
+        "word": "by"
+      },
+      {
+        "conf": 0.882023,
+        "end": 117.06,
+        "start": 116.43,
+        "word": "war"
+      }
+    ]
+  },
+  {
+    "time_ms": 119250,
+    "text": "it",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 119500,
+    "text": "get the plan",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 119750,
+    "text": "get the plan by",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 120000,
+    "text": "get the plan by a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 120000,
+    "text": "get the plan by a",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.549163,
+        "end": 118.743596,
+        "start": 118.53,
+        "word": "get"
+      },
+      {
+        "conf": 0.700832,
+        "end": 118.86,
+        "start": 118.743596,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 119.25,
+        "start": 118.86,
+        "word": "plan"
+      },
+      {
+        "conf": 1.0,
+        "end": 119.52,
+        "start": 119.25,
+        "word": "by"
+      },
+      {
+        "conf": 0.919093,
+        "end": 119.67,
+        "start": 119.52,
+        "word": "a"
+      }
+    ]
+  }
+]
