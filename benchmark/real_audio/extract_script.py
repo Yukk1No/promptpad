@@ -1,23 +1,43 @@
 #!/usr/bin/env python3
-"""Extract clean speech text from the JFK wikisource wikitext."""
+"""Extract clean speech text from a wikisource wikitext."""
 import re
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
-SRC = HERE / "jfk_raw.wiki"
-OUT = HERE / "jfk_script.txt"
+
+# Speech body markers per stem: (start_needle, end_needle)
+MARKERS = {
+    "jfk": ("Vice President Johnson", "{{PD-USGov}}"),
+    "fdr": ("Mr. {{w|Henry A. Wallace", "{{PD-USGov}}"),
+}
+
+stem = sys.argv[1] if len(sys.argv) > 1 else "jfk"
+if stem not in MARKERS:
+    print(f"Unknown stem {stem}; known: {list(MARKERS)}", file=sys.stderr)
+    sys.exit(1)
+
+SRC = HERE / f"{stem}_raw.wiki"
+OUT = HERE / f"{stem}_script.txt"
 
 text = SRC.read_text()
-
-# Speech body: lines 16..70 in the raw wiki. Easier to bound by markers.
-start = text.find("Vice President Johnson")
-end = text.find("{{PD-USGov}}")
+start_needle, end_needle = MARKERS[stem]
+start = text.find(start_needle)
+end = text.find(end_needle)
+if start < 0 or end < 0:
+    print(f"Markers not found in {SRC}: start={start} end={end}",
+          file=sys.stderr)
+    sys.exit(1)
 body = text[start:end]
 
 # Strip wiki markup:
-#  [[Bible...|text]]  -> text
-#  [[Link|text]]      -> text
-#  [[Link]]           -> Link
+#  {{w|Link|Display}}  -> Display  (wikipedia template with display override)
+#  {{w|Link}}          -> Link
+#  [[Bible...|text]]   -> text
+#  [[Link|text]]       -> text
+#  [[Link]]            -> Link
+body = re.sub(r"\{\{w\|[^}|]*\|([^}]*)\}\}", r"\1", body)
+body = re.sub(r"\{\{w\|([^}]*)\}\}", r"\1", body)
 body = re.sub(r"\[\[[^\]|]*\|([^\]]*)\]\]", r"\1", body)
 body = re.sub(r"\[\[([^\]]*)\]\]", r"\1", body)
 

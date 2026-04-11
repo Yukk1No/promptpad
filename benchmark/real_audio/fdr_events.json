@@ -1,0 +1,1323 @@
+[
+  {
+    "time_ms": 8125,
+    "text": "have",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 8375,
+    "text": "however many",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 8625,
+    "text": "other than that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 9125,
+    "text": "other than that gotta buy",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 9375,
+    "text": "other than that got a diagonal",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 9625,
+    "text": "other than that gotta buy get",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 9875,
+    "text": "other than that gotta buy it can",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 10000,
+    "text": "other than that gotta try to convey",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 10250,
+    "text": "other than that gotta buy a gun ban",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 10750,
+    "text": "other than that gotta try to convey",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 11000,
+    "text": "other than that gotta buy a gun ban",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.627919,
+        "end": 7.98,
+        "start": 7.74,
+        "word": "other"
+      },
+      {
+        "conf": 0.627919,
+        "end": 8.120345,
+        "start": 7.98,
+        "word": "than"
+      },
+      {
+        "conf": 0.764694,
+        "end": 8.37,
+        "start": 8.120345,
+        "word": "that"
+      },
+      {
+        "conf": 1.0,
+        "end": 8.7,
+        "start": 8.37,
+        "word": "gotta"
+      },
+      {
+        "conf": 0.812339,
+        "end": 9.0,
+        "start": 8.73,
+        "word": "buy"
+      },
+      {
+        "conf": 0.812339,
+        "end": 9.12,
+        "start": 9.0,
+        "word": "a"
+      },
+      {
+        "conf": 0.705867,
+        "end": 9.51,
+        "start": 9.18,
+        "word": "gun"
+      },
+      {
+        "conf": 0.532372,
+        "end": 10.17,
+        "start": 9.51,
+        "word": "ban"
+      }
+    ]
+  },
+  {
+    "time_ms": 11750,
+    "text": "got",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 12000,
+    "text": "captain",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 12500,
+    "text": "gotta",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 12750,
+    "text": "captain",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 12875,
+    "text": "captain america",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 13125,
+    "text": "captain going around",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 13375,
+    "text": "captain america",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 13875,
+    "text": "captain america",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 11.88,
+        "start": 11.34,
+        "word": "captain"
+      },
+      {
+        "conf": 0.362616,
+        "end": 12.99,
+        "start": 12.15,
+        "word": "america"
+      }
+    ]
+  },
+  {
+    "time_ms": 14375,
+    "text": "in the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 14625,
+    "text": "in a uniform",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 15125,
+    "text": "in a uniform of the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 15375,
+    "text": "in a uniform of the united",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 15875,
+    "text": "in a uniform of the united states",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 16000,
+    "text": "in a uniform of the united states marine corps",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 17750,
+    "text": "in a uniform of the united states marine corps followed by",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 18500,
+    "text": "in a uniform of the united states marine corps followed by america",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 18875,
+    "text": "in a uniform of the united states marine corps followed by a military",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 19125,
+    "text": "in a uniform of the united states marine corps followed by a military i",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 19875,
+    "text": "in a uniform of the united states marine corps followed by military i did",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 13.92,
+        "start": 13.68,
+        "word": "in"
+      },
+      {
+        "conf": 1.0,
+        "end": 14.01,
+        "start": 13.92,
+        "word": "a"
+      },
+      {
+        "conf": 1.0,
+        "end": 14.64,
+        "start": 14.01,
+        "word": "uniform"
+      },
+      {
+        "conf": 0.891286,
+        "end": 14.728085,
+        "start": 14.64,
+        "word": "of"
+      },
+      {
+        "conf": 1.0,
+        "end": 14.79,
+        "start": 14.728085,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 15.18,
+        "start": 14.79,
+        "word": "united"
+      },
+      {
+        "conf": 1.0,
+        "end": 15.48,
+        "start": 15.18,
+        "word": "states"
+      },
+      {
+        "conf": 1.0,
+        "end": 15.9,
+        "start": 15.51,
+        "word": "marine"
+      },
+      {
+        "conf": 0.714573,
+        "end": 16.35,
+        "start": 15.9,
+        "word": "corps"
+      },
+      {
+        "conf": 0.751699,
+        "end": 17.37,
+        "start": 17.01,
+        "word": "followed"
+      },
+      {
+        "conf": 0.649072,
+        "end": 17.623989,
+        "start": 17.37,
+        "word": "by"
+      },
+      {
+        "conf": 0.987029,
+        "end": 18.39,
+        "start": 17.773231,
+        "word": "military"
+      },
+      {
+        "conf": 0.880034,
+        "end": 18.75,
+        "start": 18.39,
+        "word": "i"
+      },
+      {
+        "conf": 0.341211,
+        "end": 19.635815,
+        "start": 19.462136,
+        "word": "did"
+      }
+    ]
+  },
+  {
+    "time_ms": 20375,
+    "text": "and eleven",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 20625,
+    "text": "and eleven and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 20875,
+    "text": "and eleven and what can",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 21125,
+    "text": "and eleven and watson",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 21625,
+    "text": "and eleven and watson and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 21875,
+    "text": "and eleven and one hundred",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 22000,
+    "text": "and eleven and watson and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 22250,
+    "text": "and eleven and watson and a naval right",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 22500,
+    "text": "and eleven and watson and in a way to get",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 22750,
+    "text": "and eleven and watson and a naval a captain",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 23000,
+    "text": "and eleven and watson and a naval a captain got",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 23250,
+    "text": "and eleven and watson and a naval a captain gonna",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 23500,
+    "text": "and eleven and watson and a naval a captain gun i",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 23750,
+    "text": "and eleven and watson and a naval a captain got it",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 24000,
+    "text": "and eleven and watson and a naval a captain got it i",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 24750,
+    "text": "and eleven and watson and a naval a captain gun better",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 19.8,
+        "start": 19.68,
+        "word": "and"
+      },
+      {
+        "conf": 1.0,
+        "end": 20.16,
+        "start": 19.8,
+        "word": "eleven"
+      },
+      {
+        "conf": 0.953737,
+        "end": 20.28,
+        "start": 20.16,
+        "word": "and"
+      },
+      {
+        "conf": 0.88669,
+        "end": 20.76,
+        "start": 20.28,
+        "word": "watson"
+      },
+      {
+        "conf": 0.980941,
+        "end": 21.297964,
+        "start": 21.15,
+        "word": "and"
+      },
+      {
+        "conf": 0.620333,
+        "end": 21.36,
+        "start": 21.3,
+        "word": "a"
+      },
+      {
+        "conf": 0.696443,
+        "end": 21.739418,
+        "start": 21.42082,
+        "word": "naval"
+      },
+      {
+        "conf": 0.552296,
+        "end": 21.950103,
+        "start": 21.750635,
+        "word": "a"
+      },
+      {
+        "conf": 0.97699,
+        "end": 22.5,
+        "start": 22.14,
+        "word": "captain"
+      },
+      {
+        "conf": 0.369271,
+        "end": 22.83,
+        "start": 22.5,
+        "word": "gun"
+      },
+      {
+        "conf": 0.320587,
+        "end": 23.58,
+        "start": 23.094236,
+        "word": "better"
+      }
+    ]
+  },
+  {
+    "time_ms": 25375,
+    "text": "yeah",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 25625,
+    "text": "the other",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 25875,
+    "text": "the other medical",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 26375,
+    "text": "the other medical secretary",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 26875,
+    "text": "the other medical secretary at",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 27125,
+    "text": "the other medical secretary at all",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 27375,
+    "text": "the other medical secretary at a local",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 27625,
+    "text": "the other medical secretary at all and then",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 28000,
+    "text": "the other medical secretary at all and then whether",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 28750,
+    "text": "the other medical secretary at all and then within a week",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 29000,
+    "text": "the other medical secretary at all and then whether we think",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 29250,
+    "text": "the other medical secretary at all and then whether they are",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 30000,
+    "text": "the other medical secretary at all costs and then whether they are",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 25.11,
+        "start": 24.48,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 25.26,
+        "start": 25.11,
+        "word": "other"
+      },
+      {
+        "conf": 0.974978,
+        "end": 25.59,
+        "start": 25.26,
+        "word": "medical"
+      },
+      {
+        "conf": 0.974978,
+        "end": 26.34,
+        "start": 25.68,
+        "word": "secretary"
+      },
+      {
+        "conf": 0.919846,
+        "end": 26.46,
+        "start": 26.34,
+        "word": "at"
+      },
+      {
+        "conf": 0.772858,
+        "end": 26.748829,
+        "start": 26.46,
+        "word": "all"
+      },
+      {
+        "conf": 0.485072,
+        "end": 26.94,
+        "start": 26.76,
+        "word": "costs"
+      },
+      {
+        "conf": 1.0,
+        "end": 27.15,
+        "start": 27.03,
+        "word": "and"
+      },
+      {
+        "conf": 1.0,
+        "end": 27.3,
+        "start": 27.15,
+        "word": "then"
+      },
+      {
+        "conf": 0.60661,
+        "end": 27.6,
+        "start": 27.3,
+        "word": "whether"
+      },
+      {
+        "conf": 0.671212,
+        "end": 28.86,
+        "start": 28.65,
+        "word": "they"
+      },
+      {
+        "conf": 0.671212,
+        "end": 29.01,
+        "start": 28.86,
+        "word": "are"
+      }
+    ]
+  },
+  {
+    "time_ms": 30250,
+    "text": "the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 30750,
+    "text": "the federal",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 31125,
+    "text": "the president reagan",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 31375,
+    "text": "the president has taken",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 29.94,
+        "start": 29.76,
+        "word": "the"
+      },
+      {
+        "conf": 0.962172,
+        "end": 30.39,
+        "start": 29.94,
+        "word": "president"
+      },
+      {
+        "conf": 0.537943,
+        "end": 30.6,
+        "start": 30.39,
+        "word": "has"
+      },
+      {
+        "conf": 0.395034,
+        "end": 30.96,
+        "start": 30.66,
+        "word": "taken"
+      }
+    ]
+  },
+  {
+    "time_ms": 31625,
+    "text": "make a",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 31875,
+    "text": "make an effort",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 32125,
+    "text": "make an",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 32375,
+    "text": "make an artifact",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 32625,
+    "text": "bacon at the fact that",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 33375,
+    "text": "they can the fact that",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.492256,
+        "end": 31.32,
+        "start": 31.2,
+        "word": "they"
+      },
+      {
+        "conf": 0.492256,
+        "end": 31.5,
+        "start": 31.32,
+        "word": "can"
+      },
+      {
+        "conf": 0.540042,
+        "end": 31.74,
+        "start": 31.65,
+        "word": "the"
+      },
+      {
+        "conf": 0.592832,
+        "end": 32.07,
+        "start": 31.74,
+        "word": "fact"
+      },
+      {
+        "conf": 0.62262,
+        "end": 32.34,
+        "start": 32.07,
+        "word": "that"
+      }
+    ]
+  },
+  {
+    "time_ms": 33875,
+    "text": "you know",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 34000,
+    "text": "you know much",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 34250,
+    "text": "you know my",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 34500,
+    "text": "you know much",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 34750,
+    "text": "you know my a lobbying for",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 35000,
+    "text": "you know my",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 35250,
+    "text": "you know my a lobbying for the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 35750,
+    "text": "you know my a lobbying for them",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.823852,
+        "end": 33.45,
+        "start": 33.3,
+        "word": "you"
+      },
+      {
+        "conf": 0.790097,
+        "end": 33.629553,
+        "start": 33.45,
+        "word": "know"
+      },
+      {
+        "conf": 0.575578,
+        "end": 33.75,
+        "start": 33.63,
+        "word": "my"
+      },
+      {
+        "conf": 0.759302,
+        "end": 34.02,
+        "start": 33.9,
+        "word": "a"
+      },
+      {
+        "conf": 0.40653,
+        "end": 34.44,
+        "start": 34.02,
+        "word": "lobbying"
+      },
+      {
+        "conf": 0.700436,
+        "end": 34.59,
+        "start": 34.452587,
+        "word": "for"
+      },
+      {
+        "conf": 0.434709,
+        "end": 34.77,
+        "start": 34.59,
+        "word": "them"
+      }
+    ]
+  },
+  {
+    "time_ms": 40750,
+    "text": "right",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.804334,
+        "end": 36.42,
+        "start": 36.06,
+        "word": "right"
+      }
+    ]
+  },
+  {
+    "time_ms": 71750,
+    "text": "then",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 72000,
+    "text": "then again",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 72750,
+    "text": "then again",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 71.46,
+        "start": 71.25,
+        "word": "then"
+      },
+      {
+        "conf": 1.0,
+        "end": 71.88,
+        "start": 71.46,
+        "word": "again"
+      }
+    ]
+  },
+  {
+    "time_ms": 73625,
+    "text": "and",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 74625,
+    "text": "and represented in",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 75375,
+    "text": "and representative",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 73.35,
+        "start": 73.05,
+        "word": "and"
+      },
+      {
+        "conf": 0.349954,
+        "end": 74.31,
+        "start": 73.35,
+        "word": "representative"
+      }
+    ]
+  },
+  {
+    "time_ms": 75875,
+    "text": "i have",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 76500,
+    "text": "i have been",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 76750,
+    "text": "i have been with",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 77250,
+    "text": "i have been with honor",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 78000,
+    "text": "i have been with honor",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.595272,
+        "end": 75.15,
+        "start": 75.12,
+        "word": "i"
+      },
+      {
+        "conf": 0.947217,
+        "end": 75.48,
+        "start": 75.150051,
+        "word": "have"
+      },
+      {
+        "conf": 0.716844,
+        "end": 76.17,
+        "start": 75.96,
+        "word": "been"
+      },
+      {
+        "conf": 0.782246,
+        "end": 76.47,
+        "start": 76.17,
+        "word": "with"
+      },
+      {
+        "conf": 1.0,
+        "end": 77.01,
+        "start": 76.53,
+        "word": "honor"
+      }
+    ]
+  },
+  {
+    "time_ms": 79125,
+    "text": "setting",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 79625,
+    "text": "running for president",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 80125,
+    "text": "running for president of the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 80375,
+    "text": "running for president of the united",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 80875,
+    "text": "running for president of the united states",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 81375,
+    "text": "running for president of the united states",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 78.75,
+        "start": 78.24,
+        "word": "running"
+      },
+      {
+        "conf": 1.0,
+        "end": 78.99,
+        "start": 78.87,
+        "word": "for"
+      },
+      {
+        "conf": 1.0,
+        "end": 79.5,
+        "start": 78.99,
+        "word": "president"
+      },
+      {
+        "conf": 1.0,
+        "end": 79.74,
+        "start": 79.62,
+        "word": "of"
+      },
+      {
+        "conf": 1.0,
+        "end": 79.83,
+        "start": 79.74,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 80.25,
+        "start": 79.83,
+        "word": "united"
+      },
+      {
+        "conf": 1.0,
+        "end": 80.52,
+        "start": 80.25,
+        "word": "states"
+      }
+    ]
+  },
+  {
+    "time_ms": 104875,
+    "text": "the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 105125,
+    "text": "the suburbs",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 105375,
+    "text": "the bad",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 105625,
+    "text": "the suburbs better",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 105875,
+    "text": "the suburbs better than",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 106500,
+    "text": "the best better than",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.696918,
+        "end": 104.454023,
+        "start": 104.358926,
+        "word": "the"
+      },
+      {
+        "conf": 0.28777,
+        "end": 104.88,
+        "start": 104.55,
+        "word": "best"
+      },
+      {
+        "conf": 1.0,
+        "end": 105.24,
+        "start": 104.88,
+        "word": "better"
+      },
+      {
+        "conf": 1.0,
+        "end": 105.51,
+        "start": 105.24,
+        "word": "than"
+      }
+    ]
+  },
+  {
+    "time_ms": 107750,
+    "text": "this big",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 108000,
+    "text": "this big then",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 108750,
+    "text": "this big then",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 107.180801,
+        "start": 106.997124,
+        "word": "this"
+      },
+      {
+        "conf": 1.0,
+        "end": 107.46,
+        "start": 107.19,
+        "word": "big"
+      },
+      {
+        "conf": 0.454996,
+        "end": 107.73,
+        "start": 107.46,
+        "word": "then"
+      }
+    ]
+  },
+  {
+    "time_ms": 109875,
+    "text": "number",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 110125,
+    "text": "numbers if",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 110375,
+    "text": "numbers if it's",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 110875,
+    "text": "members of the senate",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 111625,
+    "text": "numbers if the senate",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.809546,
+        "end": 109.77,
+        "start": 109.35,
+        "word": "numbers"
+      },
+      {
+        "conf": 0.809546,
+        "end": 109.898635,
+        "start": 109.77,
+        "word": "if"
+      },
+      {
+        "conf": 0.398673,
+        "end": 109.98,
+        "start": 109.898635,
+        "word": "the"
+      },
+      {
+        "conf": 1.0,
+        "end": 110.46,
+        "start": 110.014966,
+        "word": "senate"
+      }
+    ]
+  },
+  {
+    "time_ms": 113000,
+    "text": "representative",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 114000,
+    "text": "a representative",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.545882,
+        "end": 111.468765,
+        "start": 111.42301,
+        "word": "a"
+      },
+      {
+        "conf": 1.0,
+        "end": 112.83,
+        "start": 111.87,
+        "word": "representative"
+      }
+    ]
+  },
+  {
+    "time_ms": 115375,
+    "text": "yes",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 115875,
+    "text": "yesterday",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 116625,
+    "text": "yesterday",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 0.799968,
+        "end": 115.83,
+        "start": 114.9,
+        "word": "yesterday"
+      }
+    ]
+  },
+  {
+    "time_ms": 117875,
+    "text": "the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 118000,
+    "text": "he",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 118250,
+    "text": "the",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 118500,
+    "text": "the some",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 118750,
+    "text": "december",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 119000,
+    "text": "december seven",
+    "is_final": false,
+    "words": []
+  },
+  {
+    "time_ms": 119750,
+    "text": "december seven",
+    "is_final": true,
+    "words": [
+      {
+        "conf": 1.0,
+        "end": 118.17,
+        "start": 117.45,
+        "word": "december"
+      },
+      {
+        "conf": 0.858023,
+        "end": 118.65,
+        "start": 118.26,
+        "word": "seven"
+      }
+    ]
+  }
+]

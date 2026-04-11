@@ -124,28 +124,28 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
       const Duration(seconds: 30),
       (_) => _speech.healthCheck(),
     );
-    // Stale check every 5s: if no progress while ASR is active, auto-advance 1 sentence
+    // Stale check: every 5 s, if ASR has been silent for long enough,
+    // revive the recognizer (do NOT move the matcher — that caused
+    // "乱往后跳" when natural pauses teleported the user forward).
     _lastProgressTime = DateTime.now();
     _staleTimer?.cancel();
     _staleTimer = Timer.periodic(
       const Duration(seconds: 5),
-      (_) => _checkStaleAndAdvance(),
+      (_) => _reviveStaleAsr(),
     );
   }
 
-  /// If no word progress for 8+ seconds while running, auto-advance 1 sentence.
-  void _checkStaleAndAdvance() {
+  /// If no word progress for a long time while running, restart the ASR
+  /// session so fresh partials can flow. Previously this also jumped the
+  /// matcher forward by one sentence, but that teleported the user past
+  /// their actual reading position on any natural 8-second pause. We now
+  /// only restart the recognizer and leave position control to the matcher.
+  void _reviveStaleAsr() {
     if (!_isRunning || !mounted) return;
-    if (_script.sentences.isEmpty) return;
     final elapsed = DateTime.now().difference(_lastProgressTime).inSeconds;
-    if (elapsed >= 8 && _currentSentence < _script.sentences.length - 1) {
-      _matcher.jumpToSentence(_currentSentence + 1);
+    if (elapsed >= 15) {
       _lastProgressTime = DateTime.now();
-      setState(() {
-        _currentSentence = _matcher.currentSentence;
-        _currentWord = _matcher.confirmedPosition;
-      });
-      if (_isRunning) _speech.restart();
+      _speech.restart();
     }
   }
 

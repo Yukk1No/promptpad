@@ -16,20 +16,22 @@ SetLogLevel(-1)
 
 HERE = Path(__file__).parent
 MODEL_DIR = HERE / "model"
-WAV_PATH = HERE / "jfk.wav"
-OUT_PATH = HERE / "jfk_events.json"
 
 # 125 ms chunks — close to real iOS partial cadence (100-300 ms).
 CHUNK_MS = 125
 
 
 def main():
+    stem = sys.argv[1] if len(sys.argv) > 1 else "jfk"
+    wav_path = HERE / f"{stem}.wav"
+    out_path = HERE / f"{stem}_events.json"
+
     if not MODEL_DIR.exists():
         print(f"ERROR: model dir {MODEL_DIR} missing", file=sys.stderr)
         sys.exit(1)
 
     model = Model(str(MODEL_DIR))
-    with wave.open(str(WAV_PATH), "rb") as wf:
+    with wave.open(str(wav_path), "rb") as wf:
         if wf.getnchannels() != 1 or wf.getsampwidth() != 2:
             print("ERROR: wav must be 16-bit mono", file=sys.stderr)
             sys.exit(1)
@@ -90,11 +92,11 @@ def main():
     partials = len(events) - finals
     total_words = sum(len(e.get("words", [])) for e in events if e["is_final"])
 
-    OUT_PATH.write_text(json.dumps(events, indent=2))
-    print(f"Processed {WAV_PATH.name}: {len(events)} events "
+    out_path.write_text(json.dumps(events, indent=2))
+    print(f"Processed {wav_path.name}: {len(events)} events "
           f"({partials} partials + {finals} finals), "
           f"{total_words} recognized words")
-    print(f"Wrote {OUT_PATH}")
+    print(f"Wrote {out_path}")
 
     # Show final recognized text for sanity
     final_text = " ".join(

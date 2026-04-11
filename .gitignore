@@ -53,4 +53,4 @@ benchmark/real_audio/model/
 benchmark/real_audio/model.zip
 benchmark/real_audio/*.mp3
 benchmark/real_audio/*.wav
-benchmark/real_audio/jfk_raw.wiki
+benchmark/real_audio/*_raw.wiki
