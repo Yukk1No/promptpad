@@ -220,7 +220,8 @@ class ScriptMatcher implements ScriptMatcherBase {
       }
     }
 
-    if (bestSentence >= 0 && bestScore >= 5) {
+    // Require ~3 words of evidence, not just one short common word.
+    if (bestSentence >= 0 && bestScore >= 15) {
       _currentSentence = bestSentence;
       _recognizedCharCount = bestCharOffset + bestScore;
       _matchStartOffset = _recognizedCharCount;

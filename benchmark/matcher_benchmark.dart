@@ -294,6 +294,74 @@ class SimulatedAsr {
     return events;
   }
 
+  // --- Scenario 6: Tail Hallucination ---
+  // Models real ASR: each partial adds 1-2 words with a 50% chance of
+  // a hallucinated extra word at the end that gets corrected on final.
+  // The hallucinated word is pulled from further ahead in the script to
+  // stress-test forward-jump protection.
+  List<AsrEvent> tailHallucination() {
+    final events = <AsrEvent>[];
+    var wordIdx = 0;
+
+    while (wordIdx < _words.length) {
+      final chunkSize = min(8 + _rng.nextInt(5), _words.length - wordIdx);
+      final chunkEnd = wordIdx + chunkSize;
+      final chunkWords = _words.sublist(wordIdx, chunkEnd);
+
+      // Emit partials growing 1 word at a time
+      for (var p = 2; p < chunkWords.length; p++) {
+        final parts = chunkWords.sublist(0, p).toList();
+
+        // 50% chance of hallucinated tail word from further ahead
+        if (_rng.nextDouble() < 0.5 && wordIdx + p + 5 < _words.length) {
+          final halluIdx = wordIdx + p + 3 + _rng.nextInt(5);
+          parts.add(_words[halluIdx].toLowerCase());
+        }
+
+        events.add(AsrEvent(parts.join(' '), false, wordIdx + p - 1));
+      }
+
+      final finalText = chunkWords.join(' ');
+      events.add(AsrEvent(finalText, true, chunkEnd - 1));
+      wordIdx = chunkEnd;
+    }
+    return events;
+  }
+
+  // --- Scenario 7: Growing Tail Churn ---
+  // Partials grow but the last word churns between common words on each
+  // partial, simulating ASR uncertainty on the most recent word.
+  List<AsrEvent> growingTailChurn() {
+    final events = <AsrEvent>[];
+    var wordIdx = 0;
+    const churnPool = [
+      'the', 'a', 'and', 'with', 'for', 'that', 'this', 'in', 'on', 'of'
+    ];
+
+    while (wordIdx < _words.length) {
+      final chunkSize = min(10 + _rng.nextInt(5), _words.length - wordIdx);
+      final chunkEnd = wordIdx + chunkSize;
+      final chunkWords = _words.sublist(wordIdx, chunkEnd);
+
+      for (var p = 3; p < chunkWords.length; p += 1) {
+        final parts = chunkWords.sublist(0, p).toList();
+
+        // 40% chance: replace the LAST word with a churned common word
+        if (_rng.nextDouble() < 0.4) {
+          parts[parts.length - 1] =
+              churnPool[_rng.nextInt(churnPool.length)];
+        }
+
+        events.add(AsrEvent(parts.join(' '), false, wordIdx + p - 1));
+      }
+
+      final finalText = chunkWords.join(' ');
+      events.add(AsrEvent(finalText, true, chunkEnd - 1));
+      wordIdx = chunkEnd;
+    }
+    return events;
+  }
+
   String _swapVowel(String word) {
     if (word.isEmpty) return word;
     const vowels = 'aeiou';
@@ -320,6 +388,11 @@ class BenchmarkMetrics {
   double jitter = 0;
   double recoveryEvents = double.nan;
   double avgMatchMicroseconds = 0;
+  // Count of events where reported position exceeded ground truth by > 2 words.
+  // This directly measures "forward jumping" — the user-visible bug.
+  int forwardOvershoots = 0;
+  // Max forward overshoot in words
+  int maxForwardOvershoot = 0;
 }
 
 BenchmarkMetrics runScenario(
@@ -370,6 +443,18 @@ BenchmarkMetrics runScenario(
   }
   metrics.falseJumpRate =
       events.length > 1 ? falseJumps / (events.length - 1) : 0;
+
+  // Forward overshoot: how often reported position runs AHEAD of truth.
+  // This is the user-visible "jumping forward" bug.
+  var maxOvershoot = 0;
+  for (var i = 0; i < positions.length; i++) {
+    final overshoot = positions[i] - events[i].groundTruthWordIndex;
+    if (overshoot > 2) {
+      metrics.forwardOvershoots++;
+      if (overshoot > maxOvershoot) maxOvershoot = overshoot;
+    }
+  }
+  metrics.maxForwardOvershoot = maxOvershoot;
 
   // Jitter: std dev of position changes
   if (positions.length > 1) {
@@ -440,6 +525,11 @@ void _printScenario(
   _printRow('Max Error:', _fmtInt(classic.maxError), _fmtInt(advanced.maxError));
   _printRow(
       'False Jump Rate:', _fmtNum(classic.falseJumpRate), _fmtNum(advanced.falseJumpRate));
+  _printRow('Fwd Overshoots:',
+      _fmtInt(classic.forwardOvershoots), _fmtInt(advanced.forwardOvershoots));
+  _printRow('Max Overshoot:',
+      _fmtInt(classic.maxForwardOvershoot),
+      _fmtInt(advanced.maxForwardOvershoot));
   _printRow('Jitter (sigma):', _fmtNum(classic.jitter), _fmtNum(advanced.jitter));
   _printRow('Recovery Events:',
       _fmtNum(classic.recoveryEvents), _fmtNum(advanced.recoveryEvents));
@@ -538,6 +628,26 @@ void main() {
     allAdvanced.add(a);
   }
 
+  // --- Scenario 6: Tail Hallucination (real-world ASR tail prediction) ---
+  {
+    final events = asr.tailHallucination();
+    final c = runScenario(classicMatcher, script, events);
+    final a = runScenario(advancedMatcher, script, events);
+    _printScenario('Tail Hallucination', c, a);
+    allClassic.add(c);
+    allAdvanced.add(a);
+  }
+
+  // --- Scenario 7: Growing Tail Churn (churning last word per partial) ---
+  {
+    final events = asr.growingTailChurn();
+    final c = runScenario(classicMatcher, script, events);
+    final a = runScenario(advancedMatcher, script, events);
+    _printScenario('Growing Tail Churn', c, a);
+    allClassic.add(c);
+    allAdvanced.add(a);
+  }
+
   // --- Summary ---
   print('');
   print('=== Summary ===');
@@ -560,6 +670,16 @@ void main() {
     'Overall False Jump Rate:',
     _fmtNum(totalFalseJumpsC / allClassic.length),
     _fmtNum(totalFalseJumpsA / allAdvanced.length),
+  );
+
+  final totalOvershootsC =
+      allClassic.map((m) => m.forwardOvershoots).reduce((a, b) => a + b);
+  final totalOvershootsA =
+      allAdvanced.map((m) => m.forwardOvershoots).reduce((a, b) => a + b);
+  _printRow(
+    'Total Fwd Overshoots:',
+    _fmtInt(totalOvershootsC),
+    _fmtInt(totalOvershootsA),
   );
 
   _printRow(

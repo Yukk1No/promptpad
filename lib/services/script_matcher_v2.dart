@@ -2,13 +2,18 @@ import 'dart:math';
 import '../models/script.dart';
 import 'script_matcher_base.dart';
 
-/// V2 speech matcher: V1-style greedy matching + stable prefix + beam recovery.
+/// V2 speech matcher: V1-style greedy matching + tail-trim + beam recovery.
 ///
-/// Architecture (rewrite — fixes 17 bugs in the original):
+/// Architecture:
 /// - Primary: V1-style greedy char+word matching for precise position tracking
-/// - Enhancement: stable prefix extraction for partial churn resilience
-/// - Recovery: beam search for offscript detection and anchor-based re-entry
-/// - Single position output: match() returns confirmedPosition (no display split)
+/// - Forward-jump protection: trim the last spoken word on partials with ≥3
+///   words. Real ASR tails are unstable predictions that get rewritten on the
+///   next partial; since `_recognizedCharCount` is monotonic, any forward
+///   advance driven by an unstable tail word is locked in on isFinal.
+///   Trim-last-1 gives "~200ms behind but never jumps ahead".
+/// - Recovery: sentence resync (stale ≥ 4) and beam anchor search (stale ≥ 12)
+///   with forward-only windows and high score thresholds to prevent teleports
+///   on noise matches.
 /// - Direct sentence mapping (handles jumps and backward moves)
 ///
 /// Design: "不乱跳、能冻结、能回正"
@@ -39,10 +44,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
   List<(int, int)> _sentenceBounds = [];
   List<int> _sentenceCharOffsets = [];
   int _currentSentence = 0;
-
-  // Stable prefix extraction
-  final List<List<String>> _partialBuffer = [];
-  static const int _partialBufferSize = 3;
 
   // Stale detection
   int _staleCount = 0;
@@ -99,7 +100,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     _recognizedCharCount = 0;
     _currentSentence = 0;
     _staleCount = 0;
-    _partialBuffer.clear();
     _beam = [_Hypothesis(wordPos: 0)];
   }
 
@@ -115,7 +115,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     _recognizedCharCount = charPos;
     _matchStartOffset = charPos;
     _staleCount = 0;
-    _partialBuffer.clear();
     _beam = [_Hypothesis(wordPos: clamped)];
     _updateSentenceFromWordIndex(clamped);
   }
@@ -126,7 +125,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     if (script == null || script.sentences.isEmpty) return;
     _currentSentence = sentenceIndex.clamp(0, script.sentences.length - 1);
     _staleCount = 0;
-    _partialBuffer.clear();
     if (_currentSentence < _sentenceCharOffsets.length) {
       final charOff = _sentenceCharOffsets[_currentSentence];
       _recognizedCharCount = charOff;
@@ -143,26 +141,32 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
 
     final prevCount = _recognizedCharCount;
 
-    // --- Stable prefix extraction ---
     final spokenLower = spoken.toLowerCase();
     final spokenWords = spokenLower
         .split(_whitespaceRe)
         .where((w) => w.isNotEmpty)
         .toList();
 
-    final stableWords = _extractStablePrefix(
-      spokenWords
-          .map((w) => w.replaceAll(_nonAlnumRe, ''))
-          .where((w) => w.isNotEmpty)
-          .toList(),
-      isFinal,
-    );
-
-    // Use stable prefix for word matching when available
-    final wordsForMatching = stableWords.isNotEmpty ? stableWords : spokenWords;
+    // --- Tail-trim: drop the last spoken word on partials ---
+    // Real ASR partials publish unstable tail predictions that get
+    // corrected on the next partial or the final. Since _recognizedCharCount
+    // is monotonic, any forward advance driven by an unstable tail word is
+    // locked in on isFinal. Trimming the last word on partials with >= 3
+    // words gives "~200ms behind but never jumps ahead" — the correct
+    // tradeoff for a teleprompter. Finals and short partials use the
+    // full spoken text.
+    final List<String> wordsForMatching;
+    final String textForCharMatch;
+    if (isFinal || spokenWords.length < 3) {
+      wordsForMatching = spokenWords;
+      textForCharMatch = spokenLower;
+    } else {
+      wordsForMatching = spokenWords.sublist(0, spokenWords.length - 1);
+      textForCharMatch = wordsForMatching.join(' ');
+    }
 
     // --- V1-style greedy matching (primary) ---
-    final charResult = _charLevelMatch(spokenLower);
+    final charResult = _charLevelMatch(textForCharMatch);
     final wordResult = _wordLevelMatch(wordsForMatching);
     final best = max(charResult, wordResult);
     final newCount = _matchStartOffset + best;
@@ -172,6 +176,10 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     }
 
     // --- Tail-match re-anchoring ---
+    // With tail-trimmed input, the last word fed to tail-match is already
+    // from a "confirmed" position, so tail-match can safely run on every
+    // call. The 15-word forward window plus minConsecutive=3 (raised from
+    // 2) guards against coincidental short-phrase matches.
     final tailNorm = wordsForMatching
         .map((w) => w.replaceAll(_nonAlnumRe, ''))
         .where((w) => w.isNotEmpty)
@@ -218,45 +226,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     }
 
     return wordIdx;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Stable Prefix Extraction
-  // ---------------------------------------------------------------------------
-
-  List<String> _extractStablePrefix(List<String> spokenWords, bool isFinal) {
-    if (isFinal) {
-      _partialBuffer.clear();
-      return spokenWords;
-    }
-
-    if (_partialBuffer.length >= _partialBufferSize) {
-      _partialBuffer.removeAt(0);
-    }
-    _partialBuffer.add(List.of(spokenWords));
-
-    if (_partialBuffer.length < _partialBufferSize) return [];
-
-    final minLen = _partialBuffer.map((p) => p.length).reduce(min);
-    final stable = <String>[];
-
-    for (var i = 0; i < minLen; i++) {
-      final word = _partialBuffer.first[i];
-      var allMatch = true;
-      for (var j = 1; j < _partialBuffer.length; j++) {
-        if (_partialBuffer[j][i] != word) {
-          allMatch = false;
-          break;
-        }
-      }
-      if (allMatch) {
-        stable.add(word);
-      } else {
-        break;
-      }
-    }
-
-    return stable;
   }
 
   // ---------------------------------------------------------------------------
@@ -385,10 +354,12 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
 
   /// Tail-match: match last 3-5 spoken words ahead for drift correction.
   int? _tailMatch(List<String> spokenNorm) {
-    if (spokenNorm.length < 2) return null;
+    if (spokenNorm.length < 3) return null;
 
     const maxTailLen = 5;
-    const minConsecutive = 2;
+    // Require 3 consecutive matches — 2 is too easy to hit by coincidence
+    // on common English phrases like "and the", "for the", "to the".
+    const minConsecutive = 3;
     final tailLen = spokenNorm.length.clamp(minConsecutive, maxTailLen);
     final tailWords = spokenNorm.sublist(spokenNorm.length - tailLen);
     if (tailWords.length < minConsecutive) return null;
@@ -470,7 +441,10 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
       }
     }
 
-    if (bestSentence >= 0 && bestScore >= 5) {
+    // Require at least ~3 chars × 3 words worth of matching to resync.
+    // A score of 5 (one short common word) is too cheap — it lets
+    // "and/the/with" phrases teleport across sentences.
+    if (bestSentence >= 0 && bestScore >= 15) {
       _currentSentence = bestSentence;
       _recognizedCharCount = bestCharOffset + bestScore;
       _matchStartOffset = _recognizedCharCount;
@@ -489,7 +463,9 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
         .map((w) => w.replaceAll(_nonAlnumRe, ''))
         .where((w) => w.isNotEmpty)
         .toList();
-    if (spkNorm.isEmpty) return;
+    // Require at least 2 words of spoken context — single-word
+    // matches are far too likely to coincide with a distant anchor.
+    if (spkNorm.length < 2) return;
 
     final totalWords = _sourceWordsNorm.length;
     final currentWordIdx = confirmedPosition;
@@ -514,13 +490,17 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     for (var pos = lo; pos < hi; pos += 3) {
       if (_anchorIndices.contains(pos)) continue;
       final score = _scoreAnchorMatch(spkNorm, pos);
-      if (score > bestScore * 0.8 && score > 15.0) {
+      if (score > bestScore * 0.8 && score > 25.0) {
         bestScore = score;
         bestPos = pos;
       }
     }
 
-    if (bestPos >= 0 && bestScore >= 20.0) {
+    // Require substantial corroboration before teleporting 50 words:
+    // 35 points ≈ two exact matches plus an anchor bonus, OR three
+    // exact non-anchor matches. A single anchor word (25 points) is
+    // no longer enough on its own.
+    if (bestPos >= 0 && bestScore >= 35.0) {
       final charOff = _wordIndexToCharOffset(bestPos);
       _recognizedCharCount = charOff;
       _matchStartOffset = charOff;
