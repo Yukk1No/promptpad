@@ -2,31 +2,38 @@ import 'dart:math';
 import '../models/script.dart';
 import 'script_matcher_base.dart';
 
-/// V2 speech matcher: V1-style greedy matching + tail-trim + beam recovery.
+/// V3 speech matcher: V2 + cross-session-reset awareness.
 ///
-/// Architecture:
-/// - Primary: V1-style greedy char+word matching for precise position tracking
-/// - Forward-jump protection: trim the last spoken word on partials with ≥3
-///   words. Real ASR tails are unstable predictions that get rewritten on the
-///   next partial; since `_recognizedCharCount` is monotonic, any forward
-///   advance driven by an unstable tail word is locked in on isFinal.
-///   Trim-last-1 gives "~200ms behind but never jumps ahead".
-/// - Recovery: sentence resync (stale ≥ 4) and beam anchor search (stale ≥ 12)
-///   with forward-only windows and high score thresholds to prevent teleports
-///   on noise matches.
-/// - Direct sentence mapping (handles jumps and backward moves)
+/// V2's `_matchStartOffset` is anchored to the previous final's end
+/// position. The cumulative-text contract assumes every subsequent
+/// `text` argument is a left-extension of the *current* session's
+/// transcript starting from `_matchStartOffset`. Real iOS ASR breaks
+/// that contract: on silence-restart / 50-s health restart / stale
+/// revive the plugin clears its accumulator, and the next `text`
+/// arrives as a *fresh* short string starting from empty. V2 then
+/// looks for "pick" inside `script[matchStartOffset:matchStartOffset+500]`
+/// and, since "pick" usually doesn't appear in that window, fails to
+/// anchor — hence the 2.4-s "卡住" we measured on JFK ios-on-device-15.
 ///
-/// Design: "不乱跳、能冻结、能回正"
-
-enum MatcherMode { normal, uncertain, lost, offscript }
+/// V3 listens for an explicit `onSessionReset()` call from the host.
+/// On reset it does NOT change the user-visible position
+/// (`_recognizedCharCount` stays put — the user must NOT teleport)
+/// but it DOES re-pin `_matchStartOffset` to the current confirmed
+/// position so the very next fresh transcript can re-anchor in
+/// `script[currentPosition:currentPosition+500]`. This collapses the
+/// 2.4-s recovery to roughly one match cycle (~80–500 ms).
+///
+/// Body of the matcher is otherwise identical to V2 — copied here
+/// because V2's private fields are library-scoped and cannot be
+/// reached from a subclass in a different file. Keeping V3 as a
+/// self-contained copy is the explicit choice; do not touch V2.
 
 class _Hypothesis {
   int wordPos;
-  MatcherMode mode;
-  _Hypothesis({required this.wordPos}) : mode = MatcherMode.normal;
+  _Hypothesis({required this.wordPos});
 }
 
-class ScriptMatcherV2 implements ScriptMatcherBase {
+class ScriptMatcherV3 implements ScriptMatcherBase {
   Script? _script;
 
   // Pre-computed source data
@@ -34,7 +41,7 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
   List<String> _sourceWords = [];
   List<String> _sourceWordsNorm = [];
   List<String> _sourceMetaphones = [];
-  Set<int> _anchorIndices = {}; // O(1) lookup
+  Set<int> _anchorIndices = {};
 
   // V1-style greedy matching state
   int _matchStartOffset = 0;
@@ -50,7 +57,16 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
   static const int _staleThreshold = 4;
   static const int _resyncLookahead = 6;
 
-  // Beam state (for mode tracking + recovery)
+  // V3-only: number of subsequent match() calls in which recovery may run
+  // on a *partial* (not just on isFinal). Set on every session_reset.
+  // Without this, V2-style recovery only fires on isFinal — and the post-
+  // reset window can be 1.5–2.4 s of partials before the next final, which
+  // is exactly the long recovery we measured. Allowing recovery on the
+  // first few post-reset partials collapses that wait.
+  int _postResetPartialBudget = 0;
+  static const int _postResetPartialBudgetSize = 8;
+
+  // Beam state (mode tracking + recovery)
   List<_Hypothesis> _beam = [];
 
   // Static RegExp
@@ -64,9 +80,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
   @override
   int get confirmedPosition => _charCountToWordIndex(_recognizedCharCount);
 
-  @override
-  void onSessionReset() {}
-
   int get displayPosition => confirmedPosition;
 
   @override
@@ -74,9 +87,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
 
   @override
   int get totalSentences => _script?.sentences.length ?? 0;
-
-  MatcherMode get mode =>
-      _beam.isNotEmpty ? _beam.first.mode : MatcherMode.normal;
 
   @override
   void loadScript(Script script) {
@@ -137,6 +147,39 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     }
   }
 
+  /// V3-only: host signals that the underlying ASR session was reset.
+  /// The next `match()` will receive a *fresh* (non-cumulative) text.
+  /// We re-pin the match window to the current position WITHOUT
+  /// teleporting the user (`_recognizedCharCount` is preserved), and
+  /// open a small budget that lets recovery fire on partials (V2 only
+  /// runs recovery on isFinal — the post-reset window can be 1.5–2.4 s
+  /// of partials before the next final, which is the long recovery
+  /// we measured on JFK ios-on-device-15).
+  @override
+  void onSessionReset() {
+    // Re-anchor the matching window to the current confirmed position so
+    // the next fresh transcript can match starting from where the user
+    // actually is, not from where the previous final left _matchStartOffset.
+    _matchStartOffset = _recognizedCharCount;
+    // Clear stale counter — the post-reset stalls in V1/V2 came from
+    // accumulating stale-counts during the empty-text gap. A fresh
+    // session deserves a fresh stale budget.
+    _staleCount = 0;
+    // Reset beam to a single hypothesis at the current position so any
+    // beam-recovery logic also starts clean for the new session.
+    final wordIdx = confirmedPosition;
+    _beam = [_Hypothesis(wordPos: wordIdx)];
+    // Allow the next few partials to run recovery. Critical for collapsing
+    // the post-reset stall: V2 waits for the next isFinal before _resyncMatch
+    // and _beamRecovery may fire, but on JFK the next final can be 1.5–2.4 s
+    // away. A small budget (8 partials × 80 ms ≈ 640 ms) lets V3 try resync
+    // much sooner without permanently changing matcher behavior.
+    _postResetPartialBudget = _postResetPartialBudgetSize;
+    // Note: do NOT touch _recognizedCharCount, _currentSentence, or any
+    // sentence-level state — the user's view must remain stable across
+    // the boundary.
+  }
+
   /// Process a spoken transcript. Returns the current word index.
   @override
   int match(String spoken, {bool isFinal = false}) {
@@ -150,14 +193,7 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
         .where((w) => w.isNotEmpty)
         .toList();
 
-    // --- Tail-trim: drop the last spoken word on partials ---
-    // Real ASR partials publish unstable tail predictions that get
-    // corrected on the next partial or the final. Since _recognizedCharCount
-    // is monotonic, any forward advance driven by an unstable tail word is
-    // locked in on isFinal. Trimming the last word on partials with >= 3
-    // words gives "~200ms behind but never jumps ahead" — the correct
-    // tradeoff for a teleprompter. Finals and short partials use the
-    // full spoken text.
+    // --- Tail-trim: drop the last spoken word on partials with >= 3 ---
     final List<String> wordsForMatching;
     final String textForCharMatch;
     if (isFinal || spokenWords.length < 3) {
@@ -179,10 +215,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     }
 
     // --- Tail-match re-anchoring ---
-    // With tail-trimmed input, the last word fed to tail-match is already
-    // from a "confirmed" position, so tail-match can safely run on every
-    // call. The 15-word forward window plus minConsecutive=3 (raised from
-    // 2) guards against coincidental short-phrase matches.
     final tailNorm = wordsForMatching
         .map((w) => w.replaceAll(_nonAlnumRe, ''))
         .where((w) => w.isNotEmpty)
@@ -197,17 +229,30 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     final madeProgress = _recognizedCharCount > prevCount;
     if (madeProgress) {
       _staleCount = 0;
+      // Progress made: cancel post-reset partial-recovery budget. We
+      // already re-anchored on real text and don't need the safety net.
+      _postResetPartialBudget = 0;
     } else if (spoken.trim().isNotEmpty) {
       _staleCount++;
     }
 
-    // --- Recovery: resync or beam-based (only on finals, like V1) ---
-    if (_staleCount >= _staleThreshold && isFinal && spoken.trim().isNotEmpty) {
-      // Try sentence-ahead resync first
+    // --- Recovery ---
+    // V3 extension: during the post-reset window (_postResetPartialBudget
+    // > 0), allow recovery on partials too. Use a lower stale threshold
+    // (>= 2 stale partials, ~160 ms of churn) and require >= 2 spoken
+    // words so we don't false-positive on the very first partial like
+    // "pick". This is what collapses the V2 ~2.4 s recovery to <500 ms.
+    final inPostResetWindow = _postResetPartialBudget > 0;
+    if (inPostResetWindow) {
+      _postResetPartialBudget--;
+    }
+    final canRecover = (_staleCount >= _staleThreshold && isFinal) ||
+        (inPostResetWindow && _staleCount >= 2 && spokenWords.length >= 2);
+    if (canRecover && spoken.trim().isNotEmpty) {
       if (_resyncMatch(tailNorm.isNotEmpty ? tailNorm : spokenWords)) {
         _staleCount = 0;
+        _postResetPartialBudget = 0;
       } else if (_staleCount >= _staleThreshold * 3) {
-        // Beam-based anchor recovery for persistent stale (forward only)
         _beamRecovery(tailNorm.isNotEmpty ? tailNorm : spokenWords);
       }
     }
@@ -235,7 +280,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
   // V1-style Greedy Matching
   // ---------------------------------------------------------------------------
 
-  /// Character-level fuzzy match from current offset.
   int _charLevelMatch(String spokenLower) {
     if (_matchStartOffset >= _sourceText.length) return 0;
 
@@ -289,7 +333,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     return lastGoodOrigIndex + 1;
   }
 
-  /// Word-level match using pre-split spoken words.
   int _wordLevelMatch(List<String> spokenWords) {
     if (_matchStartOffset >= _sourceText.length) return 0;
     if (spokenWords.isEmpty) return 0;
@@ -355,13 +398,10 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     return matchedCharCount;
   }
 
-  /// Tail-match: match last 3-5 spoken words ahead for drift correction.
   int? _tailMatch(List<String> spokenNorm) {
     if (spokenNorm.length < 3) return null;
 
     const maxTailLen = 5;
-    // Require 3 consecutive matches — 2 is too easy to hit by coincidence
-    // on common English phrases like "and the", "for the", "to the".
     const minConsecutive = 3;
     final tailLen = spokenNorm.length.clamp(minConsecutive, maxTailLen);
     final tailWords = spokenNorm.sublist(spokenNorm.length - tailLen);
@@ -408,7 +448,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
   // Recovery: Sentence Resync + Beam Anchor Search
   // ---------------------------------------------------------------------------
 
-  /// Search ahead in next sentences for best match (ported from V1).
   bool _resyncMatch(List<String> spokenWords) {
     final script = _script;
     if (script == null || _sentenceBounds.isEmpty) return false;
@@ -444,9 +483,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
       }
     }
 
-    // Require at least ~3 chars × 3 words worth of matching to resync.
-    // A score of 5 (one short common word) is too cheap — it lets
-    // "and/the/with" phrases teleport across sentences.
     if (bestSentence >= 0 && bestScore >= 15) {
       _currentSentence = bestSentence;
       _recognizedCharCount = bestCharOffset + bestScore;
@@ -456,18 +492,13 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     return false;
   }
 
-  /// Beam-based anchor recovery for persistent stale detection.
-  /// Searches anchors in a wide window for re-entry.
   void _beamRecovery(List<String> spokenWords) {
     if (spokenWords.isEmpty) return;
 
-    // Pre-normalize once for all anchor probes
     final spkNorm = spokenWords
         .map((w) => w.replaceAll(_nonAlnumRe, ''))
         .where((w) => w.isNotEmpty)
         .toList();
-    // Require at least 2 words of spoken context — single-word
-    // matches are far too likely to coincide with a distant anchor.
     if (spkNorm.length < 2) return;
 
     final totalWords = _sourceWordsNorm.length;
@@ -476,7 +507,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     var bestScore = 0.0;
     var bestPos = -1;
 
-    // Search anchors FORWARD only (no backward jumps)
     final lo = currentWordIdx;
     final hi = min(totalWords, currentWordIdx + 50);
 
@@ -489,7 +519,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
       }
     }
 
-    // Also try every 3rd position for non-anchor recovery (forward only)
     for (var pos = lo; pos < hi; pos += 3) {
       if (_anchorIndices.contains(pos)) continue;
       final score = _scoreAnchorMatch(spkNorm, pos);
@@ -499,10 +528,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
       }
     }
 
-    // Require substantial corroboration before teleporting 50 words:
-    // 35 points ≈ two exact matches plus an anchor bonus, OR three
-    // exact non-anchor matches. A single anchor word (25 points) is
-    // no longer enough on its own.
     if (bestPos >= 0 && bestScore >= 35.0) {
       final charOff = _wordIndexToCharOffset(bestPos);
       _recognizedCharCount = charOff;
@@ -511,7 +536,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     }
   }
 
-  /// Score how well pre-normalized spoken words match near an anchor position.
   double _scoreAnchorMatch(List<String> spkNorm, int anchorIdx) {
     if (spkNorm.isEmpty) return 0;
 
@@ -556,7 +580,7 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
   }
 
   // ---------------------------------------------------------------------------
-  // Sentence Tracking — direct mapping
+  // Sentence Tracking
   // ---------------------------------------------------------------------------
 
   int _nextSentenceCharOffset() {
@@ -593,7 +617,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     if (script == null || script.sentences.isEmpty) return;
     if (_sentenceBounds.isEmpty) return;
 
-    // Direct search: find the sentence containing wordIndex
     for (var i = 0; i < _sentenceBounds.length; i++) {
       final (startW, endW) = _sentenceBounds[i];
       if (wordIndex < endW) {
@@ -618,7 +641,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     return metaSpk.isNotEmpty && metaSrc == metaSpk;
   }
 
-  /// Fuzzy match using cached metaphone for source word at index.
   bool _isFuzzyMatchCached(int sourceIdx, String spokenWord) {
     if (sourceIdx >= _sourceWordsNorm.length) return false;
     final srcWord = _sourceWordsNorm[sourceIdx];
@@ -634,7 +656,6 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
     return _isFuzzyMatchCore(srcWord, spokenWord);
   }
 
-  /// Core fuzzy match (same as V1).
   bool _isFuzzyMatchCore(String a, String b) {
     if (a.isEmpty || b.isEmpty) return false;
     if (a == b) return true;
