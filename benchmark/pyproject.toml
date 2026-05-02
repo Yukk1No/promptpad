@@ -1,0 +1,13 @@
+[project]
+name = "promptpad-benchmark"
+version = "0.1.0"
+description = "PromptPad matcher benchmark framework — 3-axis (audio × engine × cadence) with 4-layer metrics"
+requires-python = ">=3.10"
+dependencies = [
+  "audiomentations>=0.43.1",
+  "pyyaml>=6.0",
+  "vosk>=0.3.45",
+]
+
+[tool.uv]
+package = false

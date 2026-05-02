@@ -44,6 +44,9 @@ class ScriptMatcher implements ScriptMatcherBase {
   int get confirmedPosition => _charCountToWordIndex(_recognizedCharCount);
 
   @override
+  void onSessionReset() {}
+
+  @override
   void loadScript(Script script) {
     _script = script;
     _sourceText = script.tokens.map((t) => t.raw).join(' ');

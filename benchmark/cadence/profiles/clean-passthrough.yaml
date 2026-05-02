@@ -1,0 +1,17 @@
+name: clean-passthrough
+description: |
+  No streaming distortion at all. Each word becomes one final event at its
+  ground-truth start time. Used as control: any matcher that fails on this is
+  fundamentally broken before we even talk about cadence robustness.
+
+emit_partials: false
+one_final_per_word: true
+
+session_reset:
+  silence_trigger_ms: null         # never reset
+  forced_restart_s: null
+  text_accumulator_resets: false
+
+partial_churn:        {rate: 0.0}
+partial_hallucination_tail: {rate: 0.0}
+stuck_partial:        {probability_per_partial: 0.0}
