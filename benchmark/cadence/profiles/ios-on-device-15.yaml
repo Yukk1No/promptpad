@@ -1,0 +1,32 @@
+name: ios-on-device-15
+description: |
+  Approximate iOS 15+ SFSpeechRecognizer with on-device flag enabled.
+  Models silence-triggered session reset (text accumulator clears!),
+  sub-second final cadence within session.
+
+  IMPORTANT: parameters below are placeholder estimates. Run P0.0 calibration
+  (lib/services/speech_service.dart with --dart-define=CADENCE_CALIBRATION=true,
+  then benchmark/cadence/calibrate.py) to replace with measured values.
+
+emit_partials: true
+partial_interval_ms: 80           # plugin emits at ~50–100ms cadence
+
+# A session ends when the speaker's silence gap exceeds silence_trigger_ms,
+# OR when the session's wall-clock duration exceeds forced_restart_s.
+# In both cases a session_reset event is emitted; subsequent transcript
+# events start over from empty text (cumulative-within-session contract).
+session_reset:
+  silence_trigger_ms: 1500
+  silence_restart_delay_ms: 150
+  forced_restart_s: 50
+  text_accumulator_resets: true
+
+# Within a session, cumulative partials are punctuated with a final at
+# the end of the session (just before the silence-restart). For P0.5 we
+# do not model mid-session retracts — keep cadence clean except for the
+# session_reset. Future profile can add churn/hallucination.
+emit_intra_session_finals: false
+
+partial_churn:        {rate: 0.0}    # disabled in P0.5
+partial_hallucination_tail: {rate: 0.0}
+stuck_partial:        {probability_per_partial: 0.0}
