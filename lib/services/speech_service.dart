@@ -1,6 +1,22 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
+
+/// P0.0 cadence calibration. Build with:
+///   flutter run --dart-define=CADENCE_CALIBRATION=true
+/// then `adb logcat | grep CADENCE` (Android) or read the Xcode console (iOS).
+/// Pipe into benchmark/cadence/calibrate.py to extract profile parameters.
+const bool _kCadenceCalib = bool.fromEnvironment('CADENCE_CALIBRATION');
+void _calibLog(String kind, [Map<String, Object?> extra = const {}]) {
+  if (!_kCadenceCalib) return;
+  // ignore: avoid_print
+  print('CADENCE: ${jsonEncode({
+    't': DateTime.now().millisecondsSinceEpoch,
+    'kind': kind,
+    ...extra,
+  })}');
+}
 
 /// Platform-agnostic speech recognition service.
 /// iOS: SFSpeechRecognizer (on-device when available)
@@ -38,6 +54,7 @@ class SpeechService {
     _onDevice = onDevice;
     try {
       final epoch = ++_resultEpoch;
+      _calibLog('session_start', {'epoch': epoch, 'reason': 'manual_start'});
       _stt.listen(
         onResult: (result) => _onResult(result, epoch),
         localeId: locale,
@@ -61,6 +78,12 @@ class SpeechService {
     if (epoch != _resultEpoch) return; // discard stale session results
     _sessionStart = DateTime.now(); // got a result, session is alive
     final text = result.recognizedWords;
+    _calibLog('result', {
+      'epoch': epoch,
+      'is_final': result.finalResult,
+      'text_len': text.length,
+      'text': text,
+    });
     // Only suppress duplicate non-final partials. Always forward final results.
     if (text == _lastPartial && !result.finalResult) return;
     _lastPartial = text;
@@ -78,6 +101,7 @@ class SpeechService {
   DateTime _sessionStart = DateTime.now();
 
   void _onStatus(String status) {
+    _calibLog('status', {'status': status, 'manual_restart': _manualRestart});
     // speech_to_text stops after silence; auto-restart for continuous listening
     if (status == 'notListening' && _isListening && !_manualRestart) {
       _lastPartial = ''; // clear accumulated text for fresh session
@@ -94,6 +118,7 @@ class SpeechService {
     if (!_isListening || _disposed) return;
     final elapsed = DateTime.now().difference(_sessionStart).inSeconds;
     if (elapsed > 50) {
+      _calibLog('health_check_restart', {'elapsed_s': elapsed});
       // Force restart before iOS kills the session at ~60s
       await restart();
       _sessionStart = DateTime.now();
@@ -103,6 +128,7 @@ class SpeechService {
   void _listen(String locale) {
     try {
       final epoch = ++_resultEpoch;
+      _calibLog('session_start', {'epoch': epoch, 'reason': 'auto_relisten'});
       _stt.listen(
         onResult: (result) => _onResult(result, epoch),
         localeId: locale,
@@ -125,6 +151,7 @@ class SpeechService {
   /// Call this when the matcher position changes (reset/jump).
   Future<void> restart() async {
     if (!_isListening) return;
+    _calibLog('manual_restart_begin');
     _manualRestart = true;
     _resultEpoch++; // invalidate in-flight results before stop
     await _stt.stop();
