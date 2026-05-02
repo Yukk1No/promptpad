@@ -54,3 +54,6 @@ benchmark/real_audio/model.zip
 benchmark/real_audio/*.mp3
 benchmark/real_audio/*.wav
 benchmark/real_audio/*_raw.wiki
+
+# Benchmark results (regenerated artifacts: events / traces / word_timings)
+benchmark/results/
