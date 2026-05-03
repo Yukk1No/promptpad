@@ -35,7 +35,9 @@ Microphone -> `speech_to_text` plugin -> `SpeechService` (stream of `SpeechEvent
 
 **`lib/services/script_matcher_v2.dart`** (V2) - Extends V1 with: stable prefix extraction (buffers 3 partial results to filter ASR churn), beam-based anchor recovery (searches distinctive words in +/-50 word window after 6 stale results), direct sentence mapping.
 
-**`lib/screens/teleprompter_screen.dart`** - Orchestrator: initializes speech + matcher, subscribes to events, manages wakelock/brightness, runs health-check (30s) and stale-advance (8s timeout) timers. Selects V1 or V2 matcher based on `tracking_algorithm` setting.
+**`lib/services/script_matcher_v3.dart`** (V3 / V3.1) - Extends V2 with `onSessionReset()` hook + 8-partial post-reset partial-recovery budget, eliminating the cumulative-text-contract failure mode that caused V2's 1-2.4 s post-silence-restart stall. 10× MAE win on noisy real-Vosk JFK ios; byte-identical to V2 on clean inputs (TTS, no resets). V3.1 adds `setNoisyEnvironmentMode(bool)` runtime toggle: on ⇒ V2 fallback (eliminates the cafe-noise-snr-10 regression at the cost of the clean-case win). Default off ⇒ full V3 behaviour. See `benchmark/reports/v3-vs-v2-report.md` and `v3.1-noisy-toggle-report.md`.
+
+**`lib/screens/teleprompter_screen.dart`** - Orchestrator: initializes speech + matcher, subscribes to events, manages wakelock/brightness, runs health-check (30s) and stale-advance (8s timeout) timers. Selects V1, V2, or V3 matcher based on `tracking_algorithm` setting.
 
 **`lib/widgets/script_display.dart`** - Renders tokens as `Wrap` with per-word `GlobalKey` for scroll targeting. Auto-scrolls to keep current word at 1/3 screen height. Supports mirror mode.
 
@@ -52,6 +54,24 @@ Fuzzy matching cascade: exact match -> Double Metaphone -> prefix match -> subst
 ### Persistence
 
 All settings stored via `SharedPreferences` (no backend): speech locale, on-device flag, tracking algorithm, default font size, script history (last 5).
+
+## Algorithm Version Policy
+
+Matcher versions track **algorithmic breakthroughs**, not code churn. Don't bump MAJOR for refactors, parameter tweaks, or new configuration options. Otherwise the version number stops carrying meaning ("V100 in 6 months").
+
+| Level | Bump when | Examples in this repo |
+|---|---|---|
+| **MAJOR** (V1 → V2 → V3 → V4) | A new failure mode is solved, a core mechanism is added or replaced, or measured behavior changes by ≥1 order of magnitude on a calibrated benchmark. | V2 added stable-prefix + beam recovery; V3 added cross-session-reset awareness + post-reset partial budget (10× MAE win on noisy real audio). |
+| **MINOR** (V3 → V3.1 → V3.2) | Same algorithm gains a new configurable mode, runtime toggle, parameter, or interface extension. Default behavior must stay byte-identical to the previous MINOR. | V3.1 added `setNoisyEnvironmentMode(bool)` runtime fallback to V2 — same V3 algorithm, optional knob. |
+| **PATCH** (no version bump) | Bug fixes, micro-tunings, performance work, refactors, comment changes. | Threshold tweaks, dead-code removal, doc edits. |
+
+Operational rules:
+1. **One MAJOR per file.** `script_matcher_v3.dart` holds V3 and any V3.x. Don't create `script_matcher_v3_1.dart`.
+2. **A MAJOR ships with a benchmark report** under `benchmark/reports/v{N}-vs-v{N-1}-report.md` quoting concrete numbers vs the previous MAJOR on the same fixtures.
+3. **A MINOR ships with a short note** in the corresponding MAJOR's docstring + report explaining what the new toggle does and what it does NOT change. Default-off MINORs need no separate report unless they introduce a new failure surface.
+4. **Don't ship a MAJOR for a regression fix that doesn't introduce new mechanism.** If you can't explain the improvement in one sentence ("V4: gates partial recovery on per-word ASR confidence"), it's probably a MINOR.
+5. **Negative results count.** A V4 attempt that fails to satisfy its acceptance criteria stays unmerged or lands as a MINOR with the failure documented. The V4 namespace stays free for the next real breakthrough.
+6. The matcher version exposed in `tracking_algorithm` SharedPreferences setting and `replay.dart --matcher` only takes MAJOR ids (`v1`, `v2`, `v3`, `v3-noisy` alias for V3 with the noisy flag set). MINORs are accessed via configuration on the MAJOR object, not as separate matcher selections.
 
 ## Platform Constraints
 
