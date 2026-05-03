@@ -66,6 +66,16 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
   int _postResetPartialBudget = 0;
   static const int _postResetPartialBudgetSize = 8;
 
+  // V3.1 (formerly V4): opt-in noisy-environment mode. When the host
+  // calls setNoisyEnvironmentMode(true), onSessionReset() skips opening
+  // the partial-recovery budget — V3 falls back to V2 behaviour.
+  // Default off ⇒ V3.0 behaviour (10× MAE win on clean Vosk JFK ios).
+  // On ⇒ V2 fallback (eliminates the cafe-noise-snr-10 regression at
+  // the cost of the clean-case win). Investigation in
+  // benchmark/reports/v3.1-noisy-toggle-report.md and issue #5
+  // (per-word ASR confidence prerequisite for auto-detection).
+  bool _noisyEnvironment = false;
+
   // Beam state (mode tracking + recovery)
   List<_Hypothesis> _beam = [];
 
@@ -87,6 +97,17 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
 
   @override
   int get totalSentences => _script?.sentences.length ?? 0;
+
+  /// V3.1: configure the noisy-environment fallback. Pass true when the
+  /// host knows the ASR is operating under sustained moderate noise
+  /// (cafés, vehicles, public transport). The post-reset partial-
+  /// recovery budget will be suppressed and the matcher behaves like
+  /// V2. Default false ⇒ full V3 behaviour.
+  void setNoisyEnvironmentMode(bool enabled) {
+    _noisyEnvironment = enabled;
+  }
+
+  bool get isNoisyEnvironmentMode => _noisyEnvironment;
 
   @override
   void loadScript(Script script) {
@@ -174,7 +195,10 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
     // and _beamRecovery may fire, but on JFK the next final can be 1.5–2.4 s
     // away. A small budget (8 partials × 80 ms ≈ 640 ms) lets V3 try resync
     // much sooner without permanently changing matcher behavior.
-    _postResetPartialBudget = _postResetPartialBudgetSize;
+    // V3.1: noisy-mode gate — if the host marked the environment as
+    // noisy, suppress the budget so we fall back to V2's wait-for-final.
+    _postResetPartialBudget =
+        _noisyEnvironment ? 0 : _postResetPartialBudgetSize;
     // Note: do NOT touch _recognizedCharCount, _currentSentence, or any
     // sentence-level state — the user's view must remain stable across
     // the boundary.

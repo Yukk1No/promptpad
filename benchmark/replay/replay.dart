@@ -27,10 +27,9 @@ import 'package:promptpad/models/script.dart';
 import 'package:promptpad/services/script_matcher.dart';
 import 'package:promptpad/services/script_matcher_v2.dart';
 import 'package:promptpad/services/script_matcher_v3.dart';
-import 'package:promptpad/services/script_matcher_v4.dart';
 import 'package:promptpad/services/script_matcher_base.dart';
 
-ScriptMatcherBase _makeMatcher(String name, {bool noisy = false}) {
+ScriptMatcherBase _makeMatcher(String name) {
   switch (name) {
     case 'v1':
       return ScriptMatcher();
@@ -38,18 +37,15 @@ ScriptMatcherBase _makeMatcher(String name, {bool noisy = false}) {
       return ScriptMatcherV2();
     case 'v3':
       return ScriptMatcherV3();
-    case 'v4':
-      final m = ScriptMatcherV4();
-      m.setNoisyEnvironmentMode(noisy);
-      return m;
-    case 'v4-noisy':
-      // Convenience alias: v4 with noisy env preset on (V2 fallback).
-      final m = ScriptMatcherV4();
+    case 'v3-noisy':
+      // Convenience alias: V3 with noisy-environment mode on (V2 fallback).
+      // See lib/services/script_matcher_v3.dart::setNoisyEnvironmentMode.
+      final m = ScriptMatcherV3();
       m.setNoisyEnvironmentMode(true);
       return m;
     default:
       throw ArgumentError(
-          'unknown matcher: $name (expected v1|v2|v3|v4|v4-noisy)');
+          'unknown matcher: $name (expected v1|v2|v3|v3-noisy)');
   }
 }
 
