@@ -47,6 +47,9 @@ class ScriptMatcher implements ScriptMatcherBase {
   void onSessionReset() {}
 
   @override
+  void setNextEventConfidence(double meanConfidence) {}
+
+  @override
   void loadScript(Script script) {
     _script = script;
     _sourceText = script.tokens.map((t) => t.raw).join(' ');

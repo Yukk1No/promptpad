@@ -67,6 +67,9 @@ class ScriptMatcherV2 implements ScriptMatcherBase {
   @override
   void onSessionReset() {}
 
+  @override
+  void setNextEventConfidence(double meanConfidence) {}
+
   int get displayPosition => confirmedPosition;
 
   @override

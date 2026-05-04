@@ -2,38 +2,52 @@ import 'dart:math';
 import '../models/script.dart';
 import 'script_matcher_base.dart';
 
-/// V3 speech matcher: V2 + cross-session-reset awareness.
+/// V4 speech matcher: V3 + automatic confidence-aware post-reset budget gate.
 ///
-/// V2's `_matchStartOffset` is anchored to the previous final's end
-/// position. The cumulative-text contract assumes every subsequent
-/// `text` argument is a left-extension of the *current* session's
-/// transcript starting from `_matchStartOffset`. Real iOS ASR breaks
-/// that contract: on silence-restart / 50-s health restart / stale
-/// revive the plugin clears its accumulator, and the next `text`
-/// arrives as a *fresh* short string starting from empty. V2 then
-/// looks for "pick" inside `script[matchStartOffset:matchStartOffset+500]`
-/// and, since "pick" usually doesn't appear in that window, fails to
-/// anchor — hence the 2.4-s "卡住" we measured on JFK ios-on-device-15.
+/// V3 introduced an 8-partial post-reset partial-recovery budget that
+/// collapsed cross-session recovery from ~2.4 s to ~700 ms median on
+/// clean Vosk JFK ios — but regressed on cafe-noise-snr-10
+/// (MAE 41.79 → 73.09) because moderate-noise partials anchor to
+/// *wrong* sentence targets that look comparably-scored.
 ///
-/// V3 listens for an explicit `onSessionReset()` call from the host.
-/// On reset it does NOT change the user-visible position
-/// (`_recognizedCharCount` stays put — the user must NOT teleport)
-/// but it DOES re-pin `_matchStartOffset` to the current confirmed
-/// position so the very next fresh transcript can re-anchor in
-/// `script[currentPosition:currentPosition+500]`. This collapses the
-/// 2.4-s recovery to roughly one match cycle (~80–500 ms).
+/// V3.1 (`setNoisyEnvironmentMode(bool)`) was a workaround: a runtime
+/// toggle the host can flip when noise is known. V4 is the proper
+/// fix: the matcher gates the partial-recovery budget on the inbound
+/// transcript's mean ASR confidence, automatically suppressing
+/// recovery on low-confidence (= noisy) partials and admitting
+/// recovery on high-confidence (= clean) ones.
 ///
-/// Body of the matcher is otherwise identical to V2 — copied here
-/// because V2's private fields are library-scoped and cannot be
-/// reached from a subclass in a different file. Keeping V3 as a
-/// self-contained copy is the explicit choice; do not touch V2.
+/// New mechanism (the MAJOR justification per CLAUDE.md version
+/// policy): per-event mean confidence is read from the events.json
+/// schema (added in the same v4-confidence-aware PR) and used as a
+/// real-time signal — not measurable from greedy match scores
+/// alone.
+///
+/// Threshold: 0.6. Calibrated from the JFK Vosk events:
+///   clean ios:               sample mean conf ≈ 0.96 ⇒ above ⇒ V3 behavior
+///   cafe-noise-snr-10 ios:   sample mean conf ≈ 0.46 ⇒ below ⇒ V2 fallback
+///   tts_jfk ios:             mean conf = 1.0          ⇒ above ⇒ V3 behavior
+///
+/// Default-trust contract: legacy events without confidence (or
+/// confidence 1.0 from synthetic TTS) take the V3 path. Only
+/// observed-noisy partials get suppressed. V4 is therefore
+/// byte-identical to V3 on:
+///   - clean-passthrough (no session resets ⇒ budget never opens)
+///   - tts_jfk ios (resets exist but confidence = 1.0 ≥ threshold)
+///   - any pre-confidence-schema events.json the host hasn't
+///     regenerated yet (replay.dart defaults the missing field to 1.0)
+///
+/// Body of the matcher is otherwise identical to V3 — copied here
+/// because V3's private fields are library-scoped and cannot be
+/// reached from a subclass in a different file. Per CLAUDE.md
+/// "one MAJOR per file"; do not touch V3.
 
 class _Hypothesis {
   int wordPos;
   _Hypothesis({required this.wordPos});
 }
 
-class ScriptMatcherV3 implements ScriptMatcherBase {
+class ScriptMatcherV4 implements ScriptMatcherBase {
   Script? _script;
 
   // Pre-computed source data
@@ -57,24 +71,22 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
   static const int _staleThreshold = 4;
   static const int _resyncLookahead = 6;
 
-  // V3-only: number of subsequent match() calls in which recovery may run
-  // on a *partial* (not just on isFinal). Set on every session_reset.
-  // Without this, V2-style recovery only fires on isFinal — and the post-
-  // reset window can be 1.5–2.4 s of partials before the next final, which
-  // is exactly the long recovery we measured. Allowing recovery on the
-  // first few post-reset partials collapses that wait.
+  // V3-style post-reset partial-recovery budget
   int _postResetPartialBudget = 0;
   static const int _postResetPartialBudgetSize = 8;
 
-  // V3.1 (formerly V4): opt-in noisy-environment mode. When the host
-  // calls setNoisyEnvironmentMode(true), onSessionReset() skips opening
-  // the partial-recovery budget — V3 falls back to V2 behaviour.
-  // Default off ⇒ V3.0 behaviour (10× MAE win on clean Vosk JFK ios).
-  // On ⇒ V2 fallback (eliminates the cafe-noise-snr-10 regression at
-  // the cost of the clean-case win). Investigation in
-  // benchmark/reports/v3.1-noisy-toggle-report.md and issue #5
-  // (per-word ASR confidence prerequisite for auto-detection).
-  bool _noisyEnvironment = false;
+  // V4-only: most-recent mean confidence forwarded by the host before
+  // the next match() call. Defaults to 1.0 so legacy events without
+  // confidence behave identically to V3.
+  double _nextMeanConfidence = 1.0;
+
+  // V4 confidence threshold: partials with mean confidence below this
+  // value cannot trigger post-reset recovery (we trust them less than
+  // V3's recovery-on-partial path requires). Calibrated against the
+  // JFK Vosk events: 0.46 (cafe-noise-snr-10) vs 0.96 (clean) — 0.6
+  // sits in the dead zone. See benchmark/reports/v4-vs-v3-report.md
+  // for the calibration sweep.
+  static const double _confidenceGateThreshold = 0.6;
 
   // Beam state (mode tracking + recovery)
   List<_Hypothesis> _beam = [];
@@ -98,16 +110,12 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
   @override
   int get totalSentences => _script?.sentences.length ?? 0;
 
-  /// V3.1: configure the noisy-environment fallback. Pass true when the
-  /// host knows the ASR is operating under sustained moderate noise
-  /// (cafés, vehicles, public transport). The post-reset partial-
-  /// recovery budget will be suppressed and the matcher behaves like
-  /// V2. Default false ⇒ full V3 behaviour.
-  void setNoisyEnvironmentMode(bool enabled) {
-    _noisyEnvironment = enabled;
+  /// V4: host forwards the inbound event's mean confidence here before
+  /// each match() call. Stored until consumed in the next match().
+  @override
+  void setNextEventConfidence(double meanConfidence) {
+    _nextMeanConfidence = meanConfidence;
   }
-
-  bool get isNoisyEnvironmentMode => _noisyEnvironment;
 
   @override
   void loadScript(Script script) {
@@ -168,45 +176,14 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
     }
   }
 
-  /// V3-only: host signals that the underlying ASR session was reset.
-  /// The next `match()` will receive a *fresh* (non-cumulative) text.
-  /// We re-pin the match window to the current position WITHOUT
-  /// teleporting the user (`_recognizedCharCount` is preserved), and
-  /// open a small budget that lets recovery fire on partials (V2 only
-  /// runs recovery on isFinal — the post-reset window can be 1.5–2.4 s
-  /// of partials before the next final, which is the long recovery
-  /// we measured on JFK ios-on-device-15).
   @override
   void onSessionReset() {
-    // Re-anchor the matching window to the current confirmed position so
-    // the next fresh transcript can match starting from where the user
-    // actually is, not from where the previous final left _matchStartOffset.
     _matchStartOffset = _recognizedCharCount;
-    // Clear stale counter — the post-reset stalls in V1/V2 came from
-    // accumulating stale-counts during the empty-text gap. A fresh
-    // session deserves a fresh stale budget.
     _staleCount = 0;
-    // Reset beam to a single hypothesis at the current position so any
-    // beam-recovery logic also starts clean for the new session.
     final wordIdx = confirmedPosition;
     _beam = [_Hypothesis(wordPos: wordIdx)];
-    // Allow the next few partials to run recovery. Critical for collapsing
-    // the post-reset stall: V2 waits for the next isFinal before _resyncMatch
-    // and _beamRecovery may fire, but on JFK the next final can be 1.5–2.4 s
-    // away. A small budget (8 partials × 80 ms ≈ 640 ms) lets V3 try resync
-    // much sooner without permanently changing matcher behavior.
-    // V3.1: noisy-mode gate — if the host marked the environment as
-    // noisy, suppress the budget so we fall back to V2's wait-for-final.
-    _postResetPartialBudget =
-        _noisyEnvironment ? 0 : _postResetPartialBudgetSize;
-    // Note: do NOT touch _recognizedCharCount, _currentSentence, or any
-    // sentence-level state — the user's view must remain stable across
-    // the boundary.
+    _postResetPartialBudget = _postResetPartialBudgetSize;
   }
-
-  // V4-only hook: V3 ignores per-event confidence (it has no gate).
-  @override
-  void setNextEventConfidence(double meanConfidence) {}
 
   /// Process a spoken transcript. Returns the current word index.
   @override
@@ -221,7 +198,6 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
         .where((w) => w.isNotEmpty)
         .toList();
 
-    // --- Tail-trim: drop the last spoken word on partials with >= 3 ---
     final List<String> wordsForMatching;
     final String textForCharMatch;
     if (isFinal || spokenWords.length < 3) {
@@ -232,7 +208,6 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
       textForCharMatch = wordsForMatching.join(' ');
     }
 
-    // --- V1-style greedy matching (primary) ---
     final charResult = _charLevelMatch(textForCharMatch);
     final wordResult = _wordLevelMatch(wordsForMatching);
     final best = max(charResult, wordResult);
@@ -242,7 +217,6 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
       _recognizedCharCount = min(newCount, _sourceText.length);
     }
 
-    // --- Tail-match re-anchoring ---
     final tailNorm = wordsForMatching
         .map((w) => w.replaceAll(_nonAlnumRe, ''))
         .where((w) => w.isNotEmpty)
@@ -253,29 +227,30 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
       _recognizedCharCount = min(tailResult, maxJump);
     }
 
-    // --- Stale detection ---
     final madeProgress = _recognizedCharCount > prevCount;
     if (madeProgress) {
       _staleCount = 0;
-      // Progress made: cancel post-reset partial-recovery budget. We
-      // already re-anchored on real text and don't need the safety net.
       _postResetPartialBudget = 0;
     } else if (spoken.trim().isNotEmpty) {
       _staleCount++;
     }
 
-    // --- Recovery ---
-    // V3 extension: during the post-reset window (_postResetPartialBudget
-    // > 0), allow recovery on partials too. Use a lower stale threshold
-    // (>= 2 stale partials, ~160 ms of churn) and require >= 2 spoken
-    // words so we don't false-positive on the very first partial like
-    // "pick". This is what collapses the V2 ~2.4 s recovery to <500 ms.
     final inPostResetWindow = _postResetPartialBudget > 0;
     if (inPostResetWindow) {
       _postResetPartialBudget--;
     }
-    final canRecover = (_staleCount >= _staleThreshold && isFinal) ||
-        (inPostResetWindow && _staleCount >= 2 && spokenWords.length >= 2);
+    // V4 confidence gate: when the budget window is open and the
+    // inbound partial's mean confidence is below the threshold,
+    // suppress recovery for THIS call only (do not zero the budget —
+    // the next, higher-confidence partial within the window may still
+    // fire recovery). High-confidence partials and isFinal-triggered
+    // recovery (which is V2's path) are unaffected by this gate.
+    final lowConfidencePartial = inPostResetWindow &&
+        !isFinal &&
+        _nextMeanConfidence < _confidenceGateThreshold;
+    final canRecover = !lowConfidencePartial &&
+        ((_staleCount >= _staleThreshold && isFinal) ||
+            (inPostResetWindow && _staleCount >= 2 && spokenWords.length >= 2));
     if (canRecover && spoken.trim().isNotEmpty) {
       if (_resyncMatch(tailNorm.isNotEmpty ? tailNorm : spokenWords)) {
         _staleCount = 0;
@@ -285,27 +260,30 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
       }
     }
 
-    // --- Advance offset on final ---
     if (isFinal) {
       _matchStartOffset = _recognizedCharCount;
     }
 
-    // --- Sentence tracking ---
     final wordIdx = confirmedPosition;
     _updateSentenceFromWordIndex(wordIdx);
 
-    // --- Keep beam synced for mode tracking ---
     if (_beam.isEmpty || (_beam.first.wordPos - wordIdx).abs() > 3) {
       _beam = [_Hypothesis(wordPos: wordIdx)];
     } else {
       _beam.first.wordPos = wordIdx;
     }
 
+    // Reset the stored confidence after consumption so a missing
+    // setNextEventConfidence() call before the next match() reverts
+    // to the default-trust 1.0 rather than carrying forward a stale
+    // low-confidence value.
+    _nextMeanConfidence = 1.0;
+
     return wordIdx;
   }
 
   // ---------------------------------------------------------------------------
-  // V1-style Greedy Matching
+  // V1-style Greedy Matching (identical to V3)
   // ---------------------------------------------------------------------------
 
   int _charLevelMatch(String spokenLower) {
@@ -473,7 +451,7 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
   }
 
   // ---------------------------------------------------------------------------
-  // Recovery: Sentence Resync + Beam Anchor Search
+  // Recovery (identical to V3)
   // ---------------------------------------------------------------------------
 
   bool _resyncMatch(List<String> spokenWords) {
@@ -608,7 +586,7 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
   }
 
   // ---------------------------------------------------------------------------
-  // Sentence Tracking
+  // Sentence Tracking (identical to V3)
   // ---------------------------------------------------------------------------
 
   int _nextSentenceCharOffset() {
@@ -658,7 +636,7 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
   }
 
   // ---------------------------------------------------------------------------
-  // Matching Helpers
+  // Matching Helpers (identical to V3)
   // ---------------------------------------------------------------------------
 
   bool _metaphoneMatch(int sourceIdx, String spokenWord) {

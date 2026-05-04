@@ -39,12 +39,24 @@ class Word:
     word: str
     start_ms: int
     end_ms: int
+    # V4 schema extension: per-word ASR confidence (0.0–1.0). Defaults to
+    # 1.0 for legacy word_timings without confidence so downstream
+    # consumers see "fully trusted" rather than "completely untrusted".
+    confidence: float = 1.0
 
 
 def load_words(stem: str) -> tuple[list[Word], dict]:
     p = WT_DIR / f"{stem}.json"
     d = json.loads(p.read_text())
-    words = [Word(w["word"], int(w["start_ms"]), int(w["end_ms"])) for w in d["words"]]
+    words = [
+        Word(
+            w["word"],
+            int(w["start_ms"]),
+            int(w["end_ms"]),
+            float(w.get("confidence", 1.0)),
+        )
+        for w in d["words"]
+    ]
     return words, d
 
 
@@ -98,7 +110,11 @@ def split_into_sessions(words: list[Word], profile: dict) -> list[list[Word]]:
 # ---------------------------------------------------------------------------
 
 def render_clean_passthrough(words: list[Word], profile: dict) -> list[dict]:
-    """Each word = one final event at its start_ms with text = that word."""
+    """Each word = one final event at its start_ms with text = that word.
+
+    V4 schema: each event carries `confidences: [c]` and `mean_confidence: c`
+    so V4 matcher can read the per-event confidence without re-aggregating.
+    """
     events = [
         {
             "event_type": "transcript",
@@ -106,6 +122,8 @@ def render_clean_passthrough(words: list[Word], profile: dict) -> list[dict]:
             "time_ms": w.start_ms,
             "text": w.word,
             "is_final": True,
+            "confidences": [round(w.confidence, 4)],
+            "mean_confidence": round(w.confidence, 4),
         }
         for w in words
     ]
@@ -139,22 +157,38 @@ def render_ios_like(words: list[Word], profile: dict) -> list[dict]:
                 text = " ".join(w.word for w in visible)
                 # Skip empty leading partials.
                 if text:
+                    confidences = [round(w.confidence, 4) for w in visible]
+                    mean_conf = (
+                        round(sum(c for c in confidences) / len(confidences), 4)
+                        if confidences
+                        else 1.0
+                    )
                     events.append({
                         "event_type": "transcript",
                         "session_id": sid,
                         "time_ms": t,
                         "text": text,
                         "is_final": False,
+                        "confidences": confidences,
+                        "mean_confidence": mean_conf,
                     })
                 t += partial_interval_ms
 
         # Emit the session-final at last word's end_ms.
+        sess_confidences = [round(w.confidence, 4) for w in session]
+        sess_mean = (
+            round(sum(c for c in sess_confidences) / len(sess_confidences), 4)
+            if sess_confidences
+            else 1.0
+        )
         events.append({
             "event_type": "transcript",
             "session_id": sid,
             "time_ms": session[-1].end_ms,
             "text": " ".join(w.word for w in session),
             "is_final": True,
+            "confidences": sess_confidences,
+            "mean_confidence": sess_mean,
         })
 
         # If there's a next session, inject session_reset between them.
