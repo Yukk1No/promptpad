@@ -71,18 +71,17 @@ class ScriptMatcherV4 implements ScriptMatcherBase {
   static const int _staleThreshold = 4;
   static const int _resyncLookahead = 6;
 
-  // V3-style post-reset partial-recovery budget
+  // Post-reset partial-recovery budget (inherited from V3).
   int _postResetPartialBudget = 0;
   static const int _postResetPartialBudgetSize = 8;
 
-  // V4-only: most-recent mean confidence forwarded by the host before
-  // the next match() call. Defaults to 1.0 so legacy events without
-  // confidence behave identically to V3.
+  // Most-recent mean confidence forwarded by the host before the next
+  // match() call. Defaults to 1.0 so legacy events without confidence
+  // behave identically to V3 (default-trust contract).
   double _nextMeanConfidence = 1.0;
 
-  // V4 confidence threshold: partials with mean confidence below this
-  // value cannot trigger post-reset recovery (we trust them less than
-  // V3's recovery-on-partial path requires). Calibrated against the
+  // Confidence threshold: partials with mean confidence below this
+  // value cannot trigger post-reset recovery. Calibrated against the
   // JFK Vosk events: 0.46 (cafe-noise-snr-10) vs 0.96 (clean) — 0.6
   // sits in the dead zone. See benchmark/reports/v4-vs-v3-report.md
   // for the calibration sweep.
@@ -110,7 +109,7 @@ class ScriptMatcherV4 implements ScriptMatcherBase {
   @override
   int get totalSentences => _script?.sentences.length ?? 0;
 
-  /// V4: host forwards the inbound event's mean confidence here before
+  /// Host forwards the inbound event's mean confidence here before
   /// each match() call. Stored until consumed in the next match().
   @override
   void setNextEventConfidence(double meanConfidence) {

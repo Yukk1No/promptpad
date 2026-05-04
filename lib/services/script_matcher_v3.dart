@@ -204,7 +204,6 @@ class ScriptMatcherV3 implements ScriptMatcherBase {
     // the boundary.
   }
 
-  // V4-only hook: V3 ignores per-event confidence (it has no gate).
   @override
   void setNextEventConfidence(double meanConfidence) {}
 

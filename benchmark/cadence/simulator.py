@@ -39,9 +39,9 @@ class Word:
     word: str
     start_ms: int
     end_ms: int
-    # V4 schema extension: per-word ASR confidence (0.0–1.0). Defaults to
-    # 1.0 for legacy word_timings without confidence so downstream
-    # consumers see "fully trusted" rather than "completely untrusted".
+    # Per-word ASR confidence (0.0–1.0). Defaults to 1.0 for legacy
+    # word_timings without confidence so downstream consumers see
+    # "fully trusted" rather than "completely untrusted".
     confidence: float = 1.0
 
 
@@ -112,8 +112,9 @@ def split_into_sessions(words: list[Word], profile: dict) -> list[list[Word]]:
 def render_clean_passthrough(words: list[Word], profile: dict) -> list[dict]:
     """Each word = one final event at its start_ms with text = that word.
 
-    V4 schema: each event carries `confidences: [c]` and `mean_confidence: c`
-    so V4 matcher can read the per-event confidence without re-aggregating.
+    Each event carries `confidences: [c]` and `mean_confidence: c` so
+    confidence-aware matchers can read the per-event value without
+    re-aggregating.
     """
     events = [
         {
