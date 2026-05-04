@@ -8,6 +8,8 @@ import '../services/speech_service.dart';
 import '../services/script_matcher_base.dart';
 import '../services/script_matcher.dart';
 import '../services/script_matcher_v2.dart';
+import '../services/script_matcher_v3.dart';
+import '../services/script_matcher_v4.dart';
 import '../widgets/script_display.dart';
 import '../widgets/controls_overlay.dart';
 
@@ -39,6 +41,12 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
   String _lastTranscript = '';
   String _locale = 'en-US';
   bool _onDevice = true;
+  // V3+ session-reset detection: SpeechService bumps `epoch` on every
+  // _listen() restart (silence-triggered, 50s health, manual jump).
+  // When epoch changes, the underlying ASR cleared its cumulative-text
+  // accumulator — V3 / V4 want to know so they can re-anchor without
+  // teleporting the user.
+  int _lastSeenEpoch = 0;
 
   @override
   void initState() {
@@ -61,12 +69,37 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
       setState(() => _fontSize = savedFontSize);
     }
 
-    // Select tracking algorithm
+    // Select tracking algorithm. Accepts MAJOR ids per CLAUDE.md
+    // Algorithm Version Policy: 'v1' / 'v2' / 'v3' / 'v3-noisy' / 'v4'.
+    // Legacy aliases 'classic' (= v1) and 'advanced' (= v2) are kept
+    // for back-compat with users who set the pref before V3 shipped.
     final algorithm = prefs.getString('tracking_algorithm') ?? 'classic';
-    if (algorithm == 'advanced') {
-      final advMatcher = ScriptMatcherV2();
-      advMatcher.loadScript(_script);
-      _matcher = advMatcher;
+    ScriptMatcherBase? newMatcher;
+    switch (algorithm) {
+      case 'v2':
+      case 'advanced':
+        newMatcher = ScriptMatcherV2();
+        break;
+      case 'v3':
+        newMatcher = ScriptMatcherV3();
+        break;
+      case 'v3-noisy':
+        final m = ScriptMatcherV3();
+        m.setNoisyEnvironmentMode(true);
+        newMatcher = m;
+        break;
+      case 'v4':
+        newMatcher = ScriptMatcherV4();
+        break;
+      case 'v1':
+      case 'classic':
+      default:
+        // V1 already loaded in initState as the default — keep it.
+        break;
+    }
+    if (newMatcher != null) {
+      newMatcher.loadScript(_script);
+      _matcher = newMatcher;
     }
 
     await _initSpeech();
@@ -80,9 +113,24 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
     }
     setState(() => _initialized = true);
 
+    _lastSeenEpoch = _speech.epoch;
     _sub = _speech.events.listen((event) {
       if (event.type == SpeechEventType.transcript) {
         if (event.epoch != _speech.epoch) return;
+        // Detect session reset: speech_to_text plugin clears its
+        // cumulative-text accumulator on every _listen() restart and
+        // SpeechService bumps `epoch`. V3+ wants the explicit signal
+        // to re-anchor _matchStartOffset without teleporting the user.
+        if (event.epoch != _lastSeenEpoch) {
+          _matcher.onSessionReset();
+          _lastSeenEpoch = event.epoch;
+        }
+        // V4 confidence-aware gate: forward the result-level confidence
+        // before each match() so V4 can suppress speculative recovery on
+        // low-confidence partials. V1/V2/V3 ignore this hook (no-op
+        // default in ScriptMatcherBase). speech_to_text reports a single
+        // overall confidence per result; V4 treats it as the mean.
+        _matcher.setNextEventConfidence(event.confidence);
         final prevWord = _currentWord;
         final pos = _matcher.match(event.text, isFinal: event.isFinal);
         if (event.epoch != _speech.epoch) return;
