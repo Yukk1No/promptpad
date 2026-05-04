@@ -73,7 +73,7 @@ Operational rules:
 3. **A MINOR ships with a short note** in the corresponding MAJOR's docstring + report explaining what the new toggle does and what it does NOT change. Default-off MINORs need no separate report unless they introduce a new failure surface.
 4. **Don't ship a MAJOR for a regression fix that doesn't introduce new mechanism.** If you can't explain the improvement in one sentence ("V4: gates partial recovery on per-word ASR confidence"), it's probably a MINOR.
 5. **Negative results count.** A V4 attempt that fails to satisfy its acceptance criteria stays unmerged or lands as a MINOR with the failure documented. The V4 namespace stays free for the next real breakthrough.
-6. The matcher version exposed in `tracking_algorithm` SharedPreferences setting and `replay.dart --matcher` only takes MAJOR ids (`v1`, `v2`, `v3`, `v3-noisy` alias for V3 with the noisy flag set). MINORs are accessed via configuration on the MAJOR object, not as separate matcher selections.
+6. The matcher version exposed in `tracking_algorithm` SharedPreferences setting and `replay.dart --matcher` only takes MAJOR ids (`v1`, `v2`, `v3`, `v3-noisy` alias for V3 with the noisy flag set, `v4`). Legacy aliases `classic` (= v1) and `advanced` (= v2) are kept in `teleprompter_screen.dart` for back-compat with users who set the pref before V3 shipped. MINORs are accessed via configuration on the MAJOR object, not as separate matcher selections.
 
 ## Platform Constraints
 
