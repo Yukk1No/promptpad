@@ -27,6 +27,7 @@ import 'package:promptpad/models/script.dart';
 import 'package:promptpad/services/script_matcher.dart';
 import 'package:promptpad/services/script_matcher_v2.dart';
 import 'package:promptpad/services/script_matcher_v3.dart';
+import 'package:promptpad/services/script_matcher_v4.dart';
 import 'package:promptpad/services/script_matcher_base.dart';
 
 ScriptMatcherBase _makeMatcher(String name) {
@@ -39,13 +40,15 @@ ScriptMatcherBase _makeMatcher(String name) {
       return ScriptMatcherV3();
     case 'v3-noisy':
       // Convenience alias: V3 with noisy-environment mode on (V2 fallback).
-      // See lib/services/script_matcher_v3.dart::setNoisyEnvironmentMode.
+      // Superseded by V4 (automatic confidence gate); kept for ablation.
       final m = ScriptMatcherV3();
       m.setNoisyEnvironmentMode(true);
       return m;
+    case 'v4':
+      return ScriptMatcherV4();
     default:
       throw ArgumentError(
-          'unknown matcher: $name (expected v1|v2|v3|v3-noisy)');
+          'unknown matcher: $name (expected v1|v2|v3|v3-noisy|v4)');
   }
 }
 
@@ -120,6 +123,16 @@ void main(List<String> argv) {
 
     final text = e['text'] as String;
     final isFinal = e['is_final'] as bool;
+    // V4 schema: forward per-event mean confidence to the matcher
+    // before match(). V1/V2/V3 ignore this hook (no-op default in
+    // ScriptMatcherBase). Default to 1.0 when the event predates the
+    // confidence-aware schema so V4 falls back to "fully trusted".
+    final meanConf = e['mean_confidence'];
+    if (meanConf is num) {
+      matcher.setNextEventConfidence(meanConf.toDouble());
+    } else {
+      matcher.setNextEventConfidence(1.0);
+    }
     final stopwatch = Stopwatch()..start();
     matcher.match(text, isFinal: isFinal);
     stopwatch.stop();
