@@ -4,12 +4,20 @@ description: |
   Models silence-triggered session reset (text accumulator clears!),
   sub-second final cadence within session.
 
-  IMPORTANT: parameters below are placeholder estimates. Run P0.0 calibration
-  (lib/services/speech_service.dart with --dart-define=CADENCE_CALIBRATION=true,
-  then benchmark/cadence/calibrate.py) to replace with measured values.
+  P0.0 calibration partial — partial_interval_ms replaced with measured
+  median (227 ms) from a 30 s real-device run on iPhone (ios-real-1.log,
+  91 partials, 1 final). silence_trigger_ms / forced_restart_s remain
+  unverified — that run had no >1.5 s silence and was <50 s long, so
+  neither restart path fired. Re-run with deliberate silence pauses
+  and a >50 s session to validate those.
 
 emit_partials: true
-partial_interval_ms: 80           # plugin emits at ~50–100ms cadence
+# Real-device median 227 ms (p10 11, p90 566) — 4.5× slower than the
+# pre-calibration estimate of 80 ms. Source: 30 s iPhone capture via
+# Settings → Debug mode (2026-05-06), 91 partials, 1 final. Note: the
+# distribution has a long tail (max 1.5 s) likely caused by the iOS
+# plugin coalescing partials when ASR is uncertain.
+partial_interval_ms: 227
 
 # A session ends when the speaker's silence gap exceeds silence_trigger_ms,
 # OR when the session's wall-clock duration exceeds forced_restart_s.
