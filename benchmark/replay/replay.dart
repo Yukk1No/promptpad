@@ -28,6 +28,7 @@ import 'package:promptpad/services/script_matcher.dart';
 import 'package:promptpad/services/script_matcher_v2.dart';
 import 'package:promptpad/services/script_matcher_v3.dart';
 import 'package:promptpad/services/script_matcher_v4.dart';
+import 'package:promptpad/services/script_matcher_v5.dart';
 import 'package:promptpad/services/script_matcher_base.dart';
 
 ScriptMatcherBase _makeMatcher(String name) {
@@ -46,9 +47,16 @@ ScriptMatcherBase _makeMatcher(String name) {
       return m;
     case 'v4':
       return ScriptMatcherV4();
+    case 'v5':
+      // V5 = V3 + discrimination-gated _resyncMatch. Production-safe
+      // fix for the V3 cafe-noise regression that V4 only solved on
+      // benchmark fixtures (V4 needs partial-level ASR confidence,
+      // which iOS speech_to_text never reports — empirically 98.9%
+      // of partials are 0.0).
+      return ScriptMatcherV5();
     default:
       throw ArgumentError(
-          'unknown matcher: $name (expected v1|v2|v3|v3-noisy|v4)');
+          'unknown matcher: $name (expected v1|v2|v3|v3-noisy|v4|v5)');
   }
 }
 

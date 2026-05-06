@@ -197,6 +197,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
+                    DropdownMenuItem(
+                      value: 'v5',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Smart Recovery (V5)'),
+                          Text(
+                            'Discrimination-gated recovery. 2–5× more accurate than Advanced under noise; '
+                            'commits a recovery jump only when the matched sentence is clearly the best fit.',
+                            style: TextStyle(fontSize: 11, color: Colors.white38),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value == null) return;

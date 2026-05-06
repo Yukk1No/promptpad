@@ -10,6 +10,7 @@ import '../services/script_matcher.dart';
 import '../services/script_matcher_v2.dart';
 import '../services/script_matcher_v3.dart';
 import '../services/script_matcher_v4.dart';
+import '../services/script_matcher_v5.dart';
 import '../widgets/script_display.dart';
 import '../widgets/controls_overlay.dart';
 
@@ -90,6 +91,13 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
         break;
       case 'v4':
         newMatcher = ScriptMatcherV4();
+        break;
+      case 'v5':
+        // V5 = V3 + discrimination-gated _resyncMatch. Production-safe
+        // fix for the V3 cafe-noise regression (V4's confidence gate is
+        // dead in iOS production where partial confidence is 0.0).
+        // Beats V3 by 2-5× MAE across noisy conditions, ties on clean.
+        newMatcher = ScriptMatcherV5();
         break;
       case 'v1':
       case 'classic':
