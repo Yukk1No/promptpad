@@ -91,10 +91,13 @@ Calibrated against the JFK Vosk events:
 | tts_jfk ios (synthetic, V3=V2 regime) | 1.00 |
 
 0.6 sits in the dead zone, comfortably above noise (cafe-snr-10 at
-0.46) and below clean (Vosk ≥ 0.95 typically). This is a static
-constant; calibration sweep at thresholds 0.4 / 0.5 / 0.6 / 0.7
-would produce the same V4 acceptance pass on this clip — kept at
-0.6 because it leaves the most headroom in both directions.
+0.46) and below clean (Vosk ≥ 0.95 typically). Only 0.6 was
+empirically verified in the sweep below — no other threshold was
+run. Based on the 0.46 / 0.96 calibration gap, any threshold in
+roughly [0.5, 0.9] *should* produce the same acceptance pass on
+this clip, but that is an inference from the gap, not a
+measurement. 0.6 is chosen because it leaves the most headroom in
+both directions.
 
 ### Default-trust contract
 

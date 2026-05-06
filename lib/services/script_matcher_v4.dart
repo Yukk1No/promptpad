@@ -83,8 +83,11 @@ class ScriptMatcherV4 implements ScriptMatcherBase {
   // Confidence threshold: partials with mean confidence below this
   // value cannot trigger post-reset recovery. Calibrated against the
   // JFK Vosk events: 0.46 (cafe-noise-snr-10) vs 0.96 (clean) — 0.6
-  // sits in the dead zone. See benchmark/reports/v4-vs-v3-report.md
-  // for the calibration sweep.
+  // sits in the dead zone. Only the 0.6 setting was empirically
+  // verified on the benchmark sweep; the 0.46/0.96 gap suggests any
+  // threshold in roughly [0.5, 0.9] would produce the same V4
+  // acceptance pass on this clip, but no other points were measured.
+  // See benchmark/reports/v4-vs-v3-report.md for the calibration data.
   static const double _confidenceGateThreshold = 0.6;
 
   // Beam state (mode tracking + recovery)
