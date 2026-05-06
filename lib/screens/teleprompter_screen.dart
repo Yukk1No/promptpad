@@ -130,7 +130,17 @@ class _TeleprompterScreenState extends State<TeleprompterScreen> {
         // low-confidence partials. V1/V2/V3 ignore this hook (no-op
         // default in ScriptMatcherBase). speech_to_text reports a single
         // overall confidence per result; V4 treats it as the mean.
-        _matcher.setNextEventConfidence(event.confidence);
+        //
+        // Default-trust on zero: speech_to_text only populates
+        // `confidence` on the final result — partial results carry
+        // 0.0 as a "no signal" sentinel, not as "fully untrusted".
+        // Forwarding 0.0 verbatim would make V4's gate (threshold 0.6)
+        // fire on every post-reset partial in production, silently
+        // collapsing V4 to V2. Treat conf <= 0.0 as missing signal and
+        // fall back to the default-trust 1.0 so V4 takes the V3 path.
+        // See issue #10 for the cross-platform partial-confidence gap.
+        final conf = event.confidence;
+        _matcher.setNextEventConfidence(conf <= 0.0 ? 1.0 : conf);
         final prevWord = _currentWord;
         final pos = _matcher.match(event.text, isFinal: event.isFinal);
         if (event.epoch != _speech.epoch) return;
