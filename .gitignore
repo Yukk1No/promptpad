@@ -57,3 +57,7 @@ benchmark/real_audio/*_raw.wiki
 
 # Benchmark results (regenerated artifacts: events / traces / word_timings)
 benchmark/results/
+
+# Claude Code session-internal state
+.claude/scheduled_tasks.lock
+.claude/worktrees/

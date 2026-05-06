@@ -1,22 +1,16 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
+import 'debug_log.dart';
 
-/// P0.0 cadence calibration. Build with:
-///   flutter run --dart-define=CADENCE_CALIBRATION=true
-/// then `adb logcat | grep CADENCE` (Android) or read the Xcode console (iOS).
-/// Pipe into benchmark/cadence/calibrate.py to extract profile parameters.
-const bool _kCadenceCalib = bool.fromEnvironment('CADENCE_CALIBRATION');
-void _calibLog(String kind, [Map<String, Object?> extra = const {}]) {
-  if (!_kCadenceCalib) return;
-  // ignore: avoid_print
-  print('CADENCE: ${jsonEncode({
-    't': DateTime.now().millisecondsSinceEpoch,
-    'kind': kind,
-    ...extra,
-  })}');
-}
+/// P0.0 cadence calibration / issue #10 confidence measurement. Toggle
+/// via Settings → Debug mode, then export the captured log from
+/// Settings → Debug → Export calibration log and pipe through
+/// `benchmark/cadence/calibrate.py`. The runtime toggle replaces the
+/// previous `--dart-define=CADENCE_CALIBRATION` flow so testers
+/// without Xcode/adb can ship the log out of the device.
+void _calibLog(String kind, [Map<String, Object?> extra = const {}]) =>
+    DebugLog.log(kind, extra);
 
 /// Platform-agnostic speech recognition service.
 /// iOS: SFSpeechRecognizer (on-device when available)
@@ -83,6 +77,11 @@ class SpeechService {
       'is_final': result.finalResult,
       'text_len': text.length,
       'text': text,
+      // issue #10: record per-event confidence so we can measure
+      // whether speech_to_text reports useful values on partials, or
+      // (as suspected) 0.0 on every partial. Drives the V4 production
+      // confidence-gate decision.
+      'confidence': result.confidence,
     });
     // Only suppress duplicate non-final partials. Always forward final results.
     if (text == _lastPartial && !result.finalResult) return;

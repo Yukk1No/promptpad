@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
+import '../services/debug_log.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -35,6 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _fontSize = 42;
   bool _loaded = false;
   String _appVersion = '';
+  bool _debugMode = false;
 
   @override
   void initState() {
@@ -52,6 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _algorithm = prefs.getString(_algorithmKey) ?? 'classic';
       _fontSize = prefs.getDouble(_fontSizeKey) ?? 42;
       _appVersion = info.version;
+      _debugMode = DebugLog.enabled;
       _loaded = true;
     });
   }
@@ -62,6 +66,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool(_onDeviceKey, _onDevice);
     await prefs.setString(_algorithmKey, _algorithm);
     await prefs.setDouble(_fontSizeKey, _fontSize);
+  }
+
+  Future<void> _exportCalibrationLog() async {
+    if (DebugLog.bufferedLineCount == 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Log is empty — start a teleprompter session with debug mode '
+            'on, talk for 60–90s with 2–3 silence pauses, then come back.',
+          ),
+        ),
+      );
+      return;
+    }
+    try {
+      final path = await DebugLog.writeToTempFile();
+      await Share.shareXFiles(
+        [XFile(path)],
+        subject: 'PromptPad calibration log',
+        text: 'PromptPad calibration log — '
+            '${DebugLog.bufferedLineCount} events. '
+            'Pipe through benchmark/cadence/calibrate.py.',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e')),
+      );
+    }
   }
 
   @override
@@ -230,6 +264,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(fontSize: 12, color: Colors.white38),
                 ),
                 const SizedBox(height: 32),
+
+                // Debug — calibration log capture for matcher tuning.
+                // Hidden footprint: just a toggle until enabled, so it
+                // stays out of regular users' way.
+                const Text(
+                  'Debug',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white54,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SwitchListTile(
+                  title: const Text('Debug mode'),
+                  subtitle: const Text(
+                    'Capture speech-recognition cadence + confidence into '
+                    'an in-memory log. Used for matcher calibration; '
+                    'leave off for normal use.',
+                    style: TextStyle(fontSize: 12, color: Colors.white38),
+                  ),
+                  value: _debugMode,
+                  onChanged: (value) async {
+                    await DebugLog.setEnabled(value);
+                    if (!mounted) return;
+                    setState(() => _debugMode = value);
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (_debugMode) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _exportCalibrationLog,
+                          icon: const Icon(Icons.ios_share, size: 18),
+                          label: Text(
+                              'Export calibration log (${DebugLog.bufferedLineCount} events)'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: () {
+                          DebugLog.clear();
+                          if (!mounted) return;
+                          setState(() {});
+                        },
+                        child: const Text('Clear'),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 24),
 
                 // About
                 const Divider(color: Colors.white12),

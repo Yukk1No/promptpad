@@ -16,6 +16,12 @@ dependencies:
   screen_brightness: ^2.0.0
   url_launcher: ^6.2.0
   package_info_plus: ^8.0.0
+  # Debug-mode calibration log export (settings → Debug → Export
+  # calibration log). path_provider for the temp file, share_plus
+  # to invoke the system share sheet so testers without Xcode / adb
+  # can ship the log out of the device. See lib/services/debug_log.dart.
+  path_provider: ^2.1.0
+  share_plus: ^10.0.0
 
 dev_dependencies:
   flutter_test:
